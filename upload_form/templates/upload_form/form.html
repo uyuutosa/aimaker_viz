@@ -1,0 +1,14 @@
+{% extends "upload_form/base.html" %}
+
+{% block title %}アップローダサンプル{% endblock title %}
+{% block content %}
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="form">
+        <input type="submit" name="frontal" value="frontal">
+        <input type="submit" name="side"    value="side">
+    </form>
+    {% load static%}
+    <img src="{% static "posts/frontal.png"%}" style="max-height:500px"/>
+    <img src="{% static "posts/side.png"%}" style="max-height:500px"/>
+{% endblock content %}
