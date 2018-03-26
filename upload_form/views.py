@@ -13,7 +13,6 @@ def form(request):
     if request.method != 'POST':
         return render(request, 'upload_form/form.html')
 
-    input(request.FILES)
     file = request.FILES['form']
     
     if 'frontal' in request.POST:
