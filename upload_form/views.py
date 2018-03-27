@@ -34,9 +34,6 @@ def form(request):
     o.write(str(weight) + "\n")
     o.write(feel + "\n")
 
-
-
-
         
 
     if 'process' in request.POST:
@@ -80,7 +77,7 @@ def complete(request):
             feel=feel
             )
 
-    a.getExtractBackgroundImages(transform="resize512x512",gpu_id=0, divide_size=(1,1),pad=40,thresh=0)
+    a.getExtractBackgroundImages(transform="",gpu_id=0, divide_size=(1,1),pad=40,thresh=0)
     a.getPoseImages(gpu_id=1)
     param = a.getImage()
     I.fromarray(a.frontal_outlined_arr.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'frontal_outline.png'))
