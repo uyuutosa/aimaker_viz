@@ -175,8 +175,8 @@ class clothingSizeEstimator:
         frontal_p_dic['right_thigh']     = self._calcRightThighPoints(frontal_points)
         frontal_p_dic['left_calf']       = self._calcLeftCalfPoints(frontal_points)
         frontal_p_dic['right_calf']      = self._calcRightCalfPoints(frontal_points)
-        frontal_p_dic['left_upper_arm']  =  self._calc_left_upper_arm_points(frontal_points)
-        frontal_p_dic['right_upper_arm'] =  self._calc_right_upper_arm_points(frontal_points)
+        frontal_p_dic['left_upper_arm']  = self._calc_left_upper_arm_points(frontal_points)
+        frontal_p_dic['right_upper_arm'] = self._calc_right_upper_arm_points(frontal_points)
         frontal_p_dic['left_ankle']      = array(frontal_points.ix[array([13,   12])])
         frontal_p_dic['right_ankle']     = array(frontal_points.ix[array([10,   9])])
 
@@ -220,7 +220,6 @@ class clothingSizeEstimator:
         distance = linalg.norm(t) 
         
         t /= distance
-        #print(concatenate((array(points.ix[1]) + distance / 4 * t, array(points.ix[16])[None,:]), axis=0))
 
         return concatenate((array(points.ix[1]) + distance / 4 * t, array(points.ix[16])[None,:]), axis=0)
 
@@ -598,6 +597,140 @@ class clothingSizeEstimator:
 
     #    return result_dic
 
+    def estimateForeArm(self, result_dic):
+        #裾周り
+        result_dic['left_fore_arm_width']\
+            = left_fore_arm_width\
+            = self._calcNormalDistance(self.frontal_p_dic['left_fore_arm'], 
+                                        self.frontal_arr, 
+                                        self.frontal_binary, 
+                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        correction_factor=0.2,
+                                        name='left_fore_arm_width')
+
+        result_dic['right_fore_arm_width']\
+            = right_fore_arm_width\
+            = self._calcNormalDistance(self.frontal_p_dic['right_fore_arm'], 
+                                        self.frontal_arr, 
+                                        self.frontal_binary, 
+                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        correction_factor=0.2,
+                                        name='right_fore_arm_width')
+
+
+
+        result_dic['fore_arm_circumference']\
+            = self._calcCircleLength((left_fore_arm_width + right_fore_arm_width) / 4)
+
+        return result_dic
+
+    def estimateBicep(self, result_dic):
+        #上腕
+        result_dic['left_bicep_width']\
+            = left_bicep_width\
+            = self._calcNormalDistance(self.frontal_p_dic['left_bicep'], 
+                                        self.frontal_arr, 
+                                        self.frontal_binary, 
+                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        correction_factor=0.2,
+                                        name='left_bicep_width')
+
+        result_dic['right_bicep_width']\
+            = right_bicep_width\
+            = self._calcNormalDistance(self.frontal_p_dic['right_bicep'], 
+                                        self.frontal_arr, 
+                                        self.frontal_binary, 
+                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        correction_factor=0.2,
+                                        name='right_bicep_width')
+
+
+
+        result_dic['bicep_circumference']\
+            = self._calcCircleLength((left_bicep_width + right_bicep_width) / 4)
+
+        return result_dic
+
+    def estimateThigh(self, result_dic):
+        #上腕
+        result_dic['left_thigh_width']\
+            = left_thigh_width\
+            = self._calcNormalDistance(self.frontal_p_dic['left_thigh'], 
+                                        self.frontal_arr, 
+                                        self.frontal_binary, 
+                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        correction_factor=0.2,
+                                        name='left_thigh_width')
+
+        result_dic['right_thigh_width']\
+            = right_thigh_width\
+            = self._calcNormalDistance(self.frontal_p_dic['right_thigh'], 
+                                        self.frontal_arr, 
+                                        self.frontal_binary, 
+                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        correction_factor=0.2,
+                                        name='right_thigh_width')
+
+
+
+        result_dic['thigh_circumference']\
+            = self._calcCircleLength((left_thigh_width + right_thigh_width) / 4)
+
+        return result_dic
+
+    def estimateCalf(self, result_dic):
+        #上腕
+        result_dic['left_calf_width']\
+            = left_calf_width\
+            = self._calcNormalDistance(self.frontal_p_dic['left_calf'], 
+                                        self.frontal_arr, 
+                                        self.frontal_binary, 
+                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        correction_factor=0.2,
+                                        name='left_calf_width')
+
+        result_dic['right_calf_width']\
+            = right_calf_width\
+            = self._calcNormalDistance(self.frontal_p_dic['right_calf'], 
+                                        self.frontal_arr, 
+                                        self.frontal_binary, 
+                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        correction_factor=0.2,
+                                        name='right_calf_width')
+
+
+
+        result_dic['calf_circumference']\
+            = self._calcCircleLength((left_calf_width + right_calf_width) / 4)
+
+        return result_dic
+
+    def estimateAnkle(self, result_dic):
+        #裾周り
+        result_dic['ankle_left_frontal_width']\
+            = ankle_left_frontal_width\
+            = self._calcNormalDistance(self.frontal_p_dic['left_ankle'], 
+                                        self.frontal_arr, 
+                                        self.frontal_binary, 
+                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        correction_factor=0.2,
+                                        name='ankle_left_frontal_width')
+
+        result_dic['ankle_right_frontal_width']\
+            = ankle_right_frontal_width\
+            = self._calcNormalDistance(self.frontal_p_dic['right_ankle'], 
+                                        self.frontal_arr, 
+                                        self.frontal_binary, 
+                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        correction_factor=0.2,
+                                        name='ankle_right_frontal_width')
+
+
+        result_dic['ankle_circumference']\
+            = self._calcCircleLength((ankle_left_frontal_width + ankle_right_frontal_width) / 4)
+
+        return result_dic
+
     def estimateWrist(self, result_dic):
         #裾周り
         result_dic['wrist_left_frontal_width']\
@@ -682,37 +815,6 @@ class clothingSizeEstimator:
                 = (right_arm_circumference + left_arm_circumference) / 2
         return result_dic
 
-    def estimateUpperArmAround(self, result_dic):
-        # 上腕
-        result_dic['left_upper_arm_width']\
-            = left_upper_arm_width\
-            = self._calcNormalDistance(self.frontal_p_dic['left_upper_arm'], 
-                                       self.frontal_arr, 
-                                       self.frontal_binary, 
-                                       self.frontal_ratio, self.frontal_labeled_arr,
-                                       name = 'left_upper_arm_width')
-
-        result_dic['left_upper_arm_circumference']\
-            = left_upper_arm_circumference\
-            = self._calcCircleLength(left_upper_arm_width / 2)
-
-        result_dic['right_upper_arm_width']\
-            = right_upper_arm_width\
-            = self._calcNormalDistance(self.frontal_p_dic['right_upper_arm'], 
-                                       self.frontal_arr, 
-                                       self.frontal_binary, 
-                                       self.frontal_ratio, self.frontal_labeled_arr,
-                                       name = 'right_upper_arm_width')
-
-        result_dic['right_upper_arm_circumference']\
-            = right_upper_arm_circumference\
-            = self._calcCircleLength(right_upper_arm_width / 2)
-
-
-        result_dic['upper_arm_circumference']\
-                = upper_arm_circumference\
-                = (right_upper_arm_circumference + left_upper_arm_circumference) / 2
-        return result_dic
 
     def _calcEllipseLength(self, a, b):
         return pi * (a + b) * (1 + (3 * ((a - b) / (a + b)) ** 2) / (10 + sqrt(4 - 3 * (a - b) / (a + b)) ** 2))
