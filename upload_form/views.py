@@ -8,6 +8,8 @@ from django.conf import settings
 from upload_form.models import FileNameModel
 import sys, os
 import clothing_size_estimator.clothing_size_estimator as c
+import PIL.Image as I
+from numpy import *
 
 UPLOADE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/static/posts/'
 
@@ -61,7 +63,7 @@ def complete(request):
     a.getPoseImages(gpu_id=1)
     param = a.getImage()
     I.fromarray(a.frontal_outlined_arr.astype(uint8)).save('frontal_outline.png')
-    I.fromarray(a.slide_outlined_arr.astype(uint8)).save('side_outline.png')
+    I.fromarray(a.side_outlined_arr.astype(uint8)).save('side_outline.png')
     I.fromarray(a.frontal_labeled_arr.astype(uint8)).save('frontal_labeled.png')
     I.fromarray(a.side_labeled_arr.astype(uint8)).save('side_labeled.png')
     I.fromarray(a.frontal_binary.astype(uint8)).save('frontal_binary.png')

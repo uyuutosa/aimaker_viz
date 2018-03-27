@@ -129,16 +129,16 @@ class clothingSizeEstimator:
         self._initializeLabeledImage()
         result_dic = {}
         result_dic = self.estimateNeck(result_dic)
-        result_dic = self.estimateShoulderWidth(result_dic)
-        result_dic = self.estimateChestWidth(result_dic)
-        result_dic = self.estimateWaist(result_dic)
-        result_dic = self.estimateHem(result_dic)
-        result_dic = self.estimateWrist(result_dic)
-        result_dic = self.estimateForeArm(result_dic)
-        result_dic = self.estimateBicep(result_dic)
-        result_dic = self.estimateCalf(result_dic)
-        result_dic = self.estimateThigh(result_dic)
-        result_dic = self.estimateAnkle(result_dic)
+        #result_dic = self.estimateShoulderWidth(result_dic)
+        #result_dic = self.estimateChestWidth(result_dic)
+        #result_dic = self.estimateWaist(result_dic)
+        #result_dic = self.estimateHem(result_dic)
+        #result_dic = self.estimateWrist(result_dic)
+        #result_dic = self.estimateForeArm(result_dic)
+        #result_dic = self.estimateBicep(result_dic)
+        #result_dic = self.estimateCalf(result_dic)
+        #result_dic = self.estimateThigh(result_dic)
+        #result_dic = self.estimateAnkle(result_dic)
         return result_dic
 
     def _initializeLabeledImage(self):
