@@ -6,4 +6,16 @@
         <h1 align="center">アップロード完了</h1>
         <a href="{% url 'upload_form:form' %}"><button>戻る</button></a>
     </div>
+
+    {% load static%}
+    <img src="{% static "posts/frontal.png"%}" style="max-height:500px"/>
+    <img src="{% static "posts/side.png"%}" style="max-height:500px"/>
+    <img src="{% static "posts/frontal_outlined.png"%}" style="max-height:500px"/>
+    <img src="{% static "posts/side_outlined.png"%}" style="max-height:500px"/>
+    <img src="{% static "posts/frontal_pose.png"%}" style="max-height:500px"/>
+    <img src="{% static "posts/side_pose.png"%}" style="max-height:500px"/>
+    <img src="{% static "posts/frontal_binary.png"%}" style="max-height:500px"/>
+    <img src="{% static "posts/side_binary.png"%}" style="max-height:500px"/>
+
+    
 {% endblock content %}
