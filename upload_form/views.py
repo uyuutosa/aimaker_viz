@@ -16,13 +16,14 @@ UPLOADE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/static/posts/'
 def form(request):
     if request.method != 'POST':
         return render(request, 'upload_form/form.html')
+
     height = request.POST['height']
     weight = request.POST['weight']
+    resize = int(request.POST['resize'])
 
     o = open(os.path.join(UPLOADE_DIR, 'height_weight.txt'), "w")
     o.write(str(height) + "\n")
     o.write(str(weight) + "\n")
-    print(request.POST)
 
     if 'process' in request.POST:
         return redirect('upload_form:complete')
@@ -33,12 +34,17 @@ def form(request):
 
     file = request.FILES['form']
 
-    path = os.path.join(UPLOADE_DIR, name + ".png")
-    #path = os.path.join(UPLOADE_DIR, file.name)
+    #path = os.path.join(UPLOADE_DIR, name + ".png")
+    path = os.path.join(UPLOADE_DIR, file.name)
     destination = open(path, 'wb')
 
     for chunk in file.chunks():
         destination.write(chunk)
+
+    img = I.open(path)
+    width, height = img.size
+    ratio = height / width
+    img.resize((resize, int(resize*ratio))).save(os.path.join(UPLOADE_DIR, name + ".png"))
 
     insert_data = FileNameModel(file_name = file.name)
     insert_data.save()
@@ -61,15 +67,13 @@ def complete(request):
     a.getExtractBackgroundImages(transform="resize512x512",gpu_id=0, divide_size=(1,1),pad=40,thresh=0)
     a.getPoseImages(gpu_id=1)
     param = a.getImage()
-    I.fromarray(a.frontal_outlined_arr.astype(uint8)).save('frontal_outline.png')
-    I.fromarray(a.side_outlined_arr.astype(uint8)).save('side_outline.png')
-    I.fromarray(a.frontal_labeled_arr.astype(uint8)).save('frontal_labeled.png')
-    I.fromarray(a.side_labeled_arr.astype(uint8)).save('side_labeled.png')
-    I.fromarray(a.frontal_binary.astype(uint8)).save('frontal_binary.png')
-    I.fromarray(a.side_binary.astype(uint8)).save('side_binary.png')
-    I.fromarray(a.frontal_pose_labeled_image.astype(uint8)).save('frontal_pose.png')
-    I.fromarray(a.side_pose_labeled_image.astype(uint8)).save('side_pose.png')
-    I.fromarray(a.frontal_labeled_arr.astype(uint8)).save('frontal_estimate.png')
-    I.fromarray(a.side_labeled_arr.astype(uint8)).save('side_estimate.png')
+    I.fromarray(a.frontal_outlined_arr.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'frontal_outline.png'))
+    I.fromarray(a.side_outlined_arr.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'side_outline.png'))
+    I.fromarray(a.frontal_labeled_arr.astype(uint8)[...,::-1]).save(os.path.join(UPLOADE_DIR, 'frontal_estimate.png'))
+    I.fromarray(a.side_labeled_arr.astype(uint8)[...,::-1]).save(os.path.join(UPLOADE_DIR, 'side_estimate.png'))
+    I.fromarray(a.frontal_binary.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'frontal_binary.png'))
+    I.fromarray(a.side_binary.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'side_binary.png'))
+    I.fromarray(a.frontal_pose_labeled_image.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'frontal_pose.png'))
+    I.fromarray(a.side_pose_labeled_image.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'side_pose.png'))
 
     return render(request, 'upload_form/complete.html', param)

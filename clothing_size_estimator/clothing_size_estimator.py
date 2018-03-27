@@ -206,7 +206,7 @@ class clothingSizeEstimator:
         cnt = contours[argmax(lst)]
         cnt[:,0,0] += offset_info["x"]
         cnt[:,0,1] += offset_info["y"]
-        return cv2.drawContours(raw.copy(),[cnt.astype(int32)] , -1, (0,255,0), 2).astype(uint8)
+        return cv2.drawContours(raw.copy(),[cnt.astype(int32)] , -1, (0,255,0), 2).astype(uint8)#[...,::-1]
 
     def _calcNeckPoints(self, points):
         t = (array(points.ix[0]) - points.ix[1])[None,:]* 1.
@@ -1227,6 +1227,6 @@ class clothingSizeEstimator:
         if dump_path is not None:
             cv2.imwrite(dump_path, canvas)   
 
-        return param_arr, canvas
+        return param_arr, canvas[...,::-1]
         #cv2.imwrite('result.png',canvas)   
 
