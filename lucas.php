@@ -50,13 +50,13 @@ function avg($a) {
 
 // INPUTS //
 
-$height_cm = 178; // cm
-$weight_kg = 82; // kg
-$waist_cm = 86; // cm
+$height_cm = $argv[1]; // cm
+$weight_kg = $argv[2]; // kg
+#$waist_cm = 86; // cm
 
-$height_cm = $_REQUEST['height'];
-$weight_kg = $_REQUEST['weight'];
-$waist_cm = $_REQUEST['waist'];
+#$height_cm = $_REQUEST['height'];
+#$weight_kg = $_REQUEST['weight'];
+#$waist_cm = $_REQUEST['waist'];
 
 $head_height = $height_cm * 1/8;
 $body_length = $height_cm * 7/8;

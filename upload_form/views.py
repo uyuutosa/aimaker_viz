@@ -12,6 +12,7 @@ import PIL.Image as I
 from numpy import *
 
 UPLOADE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/static/posts/'
+intermed_file = 'intermed.txt'
 
 def form(request):
     if request.method != 'POST':
@@ -21,9 +22,22 @@ def form(request):
     weight = request.POST['weight']
     resize = int(request.POST['resize'])
 
-    o = open(os.path.join(UPLOADE_DIR, 'height_weight.txt'), "w")
+    if 'Tight' in request.POST['cloth']:
+        feel = 'tight'
+    elif 'Loose' in request.POST['cloth']:
+        feel = 'loose'
+    else:
+        feel = 'Nomal'
+
+    o = open(os.path.join(UPLOADE_DIR, intermed_file), "w")
     o.write(str(height) + "\n")
     o.write(str(weight) + "\n")
+    o.write(feel + "\n")
+
+
+
+
+        
 
     if 'process' in request.POST:
         return redirect('upload_form:complete')
@@ -56,12 +70,14 @@ def complete(request):
     o = open(os.path.join(UPLOADE_DIR, 'height_weight.txt'))
     height = int(o.readline())
     weight = int(o.readline())
+    feel   = o.readline()
 
     a = c.clothingSizeEstimator(
             os.path.join(UPLOADE_DIR, 'frontal.png'),
             os.path.join(UPLOADE_DIR, 'side.png'),
             height_cm=height,
             weight_kg=weight,
+            feel=feel
             )
 
     a.getExtractBackgroundImages(transform="resize512x512",gpu_id=0, divide_size=(1,1),pad=40,thresh=0)

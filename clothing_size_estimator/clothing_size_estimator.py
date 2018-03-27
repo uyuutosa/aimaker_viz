@@ -8,14 +8,18 @@ import subprocess as sb
 
 class LucasEstimator:
     def __init__(self, path, height, weight):
-        popen = sb.Popen("php {} {}".format(height, weight).split(), stdout=sb.PIPE)
+        print("php {} {} {}".format(path, height, weight))
+        popen = sb.Popen("php {} {} {}".format(path, height, weight).split(), stdout=sb.PIPE)
         line = popen.communicate()[0]
+        print(line)
         lst  = [{x[0].strip(b'"') : float(x[1].strip(b'"'))} for x in [x.split(b':') for x in line[12:].strip(b'{}').split(b',')]]
+        print(lst)
         self.param_dic = {}
         [self.param_dic.update(x) for x in lst]                                                                              
+        print(self.param_dic)
 
     def __getitem__(self, key):
-        return self.pram_dic[key]
+        return self.param_dic[key]
         
 
 class clothingSizeEstimator:
@@ -24,7 +28,8 @@ class clothingSizeEstimator:
                  side_image_path, 
                  height_cm=175,
                  weight_kg=65,
-                 lucas_path="./lucas.php"):
+                 lucas_path="./lucas.php",
+                 feel='normal'):
 
         self.frontal_image_path = frontal_image_path
         self.side_image_path    = side_image_path
@@ -37,7 +42,14 @@ class clothingSizeEstimator:
         self.height_cm = height_cm
         self.weight_kg = weight_kg
         self.lucas = LucasEstimator(lucas_path, height_cm, weight_kg)
+        self.feel = feel
 
+    def _correctIfLucasIsMoreProper(self, result_dic, key=None, lucas_key=None):
+        if key is not None:
+            if result_dic[key] > self.lucas[lucas_key]:
+                result_dic[key] = self.lucas[lucas_key]
+        return result_dic
+                
 
     def getExtractBackgroundImages(self,
                                    transform='', 
@@ -126,19 +138,21 @@ class clothingSizeEstimator:
         self.frontal_ratio  = self._getRatio(self.height_cm, self.frontal_binary)
         self.side_ratio     = self._getRatio(self.height_cm, self.side_binary)
 
+        c = self._correctIfLucasIsMoreProper
+
         self._initializeLabeledImage()
         result_dic = {}
-        result_dic = self.estimateNeck(result_dic)
-        result_dic = self.estimateShoulderWidth(result_dic)
-        result_dic = self.estimateBicep(result_dic)
-        result_dic = self.estimateForeArm(result_dic)
-        result_dic = self.estimateChestWidth(result_dic)
-        result_dic = self.estimateWaist(result_dic)
-        result_dic = self.estimateHem(result_dic)
-        result_dic = self.estimateWrist(result_dic)
-        result_dic = self.estimateThigh(result_dic)
-        result_dic = self.estimateCalf(result_dic)
-        result_dic = self.estimateAnkle(result_dic)
+        result_dic = c(self.estimateNeck(result_dic), 'neck_circumference', b'neck')
+        result_dic = c(self.estimateShoulderWidth(result_dic), 'shoulder_width', b'shoulder')
+        result_dic = c(self.estimateBicep(result_dic))
+        result_dic = c(self.estimateForeArm(result_dic))
+        result_dic = c(self.estimateChestWidth(result_dic), 'chest_circumference', b'chest')
+        result_dic = c(self.estimateWaist(result_dic))
+        result_dic = c(self.estimateHem(result_dic))
+        result_dic = c(self.estimateWrist(result_dic))
+        result_dic = c(self.estimateThigh(result_dic))
+        result_dic = c(self.estimateCalf(result_dic))
+        result_dic = c(self.estimateAnkle(result_dic))
         return result_dic
 
     def _initializeLabeledImage(self):
