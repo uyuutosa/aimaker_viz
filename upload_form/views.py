@@ -14,6 +14,13 @@ UPLOADE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/static/posts/'
 def form(request):
     if request.method != 'POST':
         return render(request, 'upload_form/form.html')
+    height = request.POST['height']
+    weight = request.POST['weight']
+
+    o = open(os.path.join(UPLOADE_DIR, 'height_weight.txt'), "w")
+    o.write(str(height) + "\n")
+    o.write(str(weight) + "\n")
+    print(request.POST)
 
     if 'process' in request.POST:
         return redirect('upload_form:complete')
@@ -22,9 +29,8 @@ def form(request):
     else:
         name = 'side'
 
-    o = open(os.path.join(UPLOADE_DIR, 'height_width.txt'), "w")
-    height
-    width  = int(o.readline())
+    file = request.FILES['form']
+
 
     path = os.path.join(UPLOADE_DIR, name + ".png")
     #path = os.path.join(UPLOADE_DIR, file.name)
@@ -40,15 +46,15 @@ def form(request):
 
 def complete(request):
 
-    o = open(os.path.join(UPLOADE_DIR, 'height_width.txt'))
+    o = open(os.path.join(UPLOADE_DIR, 'height_weight.txt'))
     height = int(o.readline())
-    width  = int(o.readline())
+    weight = int(o.readline())
 
     a = c.clothingSizeEstimator(
             os.path.join(UPLOADE_DIR, 'frontal.png'),
             os.path.join(UPLOADE_DIR, 'side.png'),
             height_cm=height,
-            width_cm=width,
+            weight_kg=weight,
             )
 
     a.getExtractBackgroundImages(transform="",gpu_id=0, divide_size=(1,1),pad=40,thresh=0)

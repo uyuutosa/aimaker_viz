@@ -8,11 +8,11 @@ import subprocess as sb
 
 class LucasEstimator:
     def __init__(self, path, height, weight):
-        popen = sb.Popen("php {} {} {} ".format(height, weight).split(), stdout=s.PIPE)
+        popen = sb.Popen("php {} {}".format(height, weight).split(), stdout=sb.PIPE)
         line = popen.communicate()[0]
-        lst  = [{x[0].strip(b'"') : float(x[1].strip(b'"'))} for x in [x.split(b':') for x in b[12:].strip(b'{}').split(b',')]]
+        lst  = [{x[0].strip(b'"') : float(x[1].strip(b'"'))} for x in [x.split(b':') for x in line[12:].strip(b'{}').split(b',')]]
         self.param_dic = {}
-        [param_dic.update(x) for x in lst]                                                                              
+        [self.param_dic.update(x) for x in lst]                                                                              
 
     def __getitem__(self, key):
         return self.pram_dic[key]
@@ -23,7 +23,7 @@ class clothingSizeEstimator:
                  frontal_image_path, 
                  side_image_path, 
                  height_cm=175,
-                 width_kg=65,
+                 weight_kg=65,
                  lucas_path="./lucas.php"):
 
         self.frontal_image_path = frontal_image_path
@@ -35,8 +35,8 @@ class clothingSizeEstimator:
         self.side_raw_arr = array(side_image)
 
         self.height_cm = height_cm
-        self.weight_kg = weght_kg
-        self.lucas = LucasEstimator(lucas_path, height, weight)
+        self.weight_kg = weight_kg
+        self.lucas = LucasEstimator(lucas_path, height_cm, weight_kg)
 
 
     def getExtractBackgroundImages(self,
