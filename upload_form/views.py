@@ -14,6 +14,17 @@ from numpy import *
 UPLOADE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/static/posts/'
 intermed_file = 'intermed.txt'
 
+convert_image = {
+    1: lambda img: img,
+    2: lambda img: img.transpose(I.FLIP_LEFT_RIGHT),                              # 左右反転
+    3: lambda img: img.transpose(I.ROTATE_180),                                   # 180度回転
+    4: lambda img: img.transpose(I.FLIP_TOP_BOTTOM),                              # 上下反転
+    5: lambda img: img.transpose(I.FLIP_LEFT_RIGHT).transpose(Pillow.ROTATE_90),  # 左右反転＆反時計回りに90度回転
+    6: lambda img: img.transpose(I.ROTATE_270),                                   # 反時計回りに270度回転
+    7: lambda img: img.transpose(I.FLIP_LEFT_RIGHT).transpose(Pillow.ROTATE_270), # 左右反転＆反時計回りに270度回転
+    8: lambda img: img.transpose(I.ROTATE_90),                                    # 反時計回りに90度回転
+}
+
 def form(request):
     if request.method != 'POST':
         return render(request, 'upload_form/form.html')
@@ -27,14 +38,12 @@ def form(request):
     elif 'Loose' in request.POST['cloth']:
         feel = 'loose'
     else:
-        feel = 'Nomal'
+        feel = 'normal'
 
     o = open(os.path.join(UPLOADE_DIR, intermed_file), "w")
     o.write(str(height) + "\n")
     o.write(str(weight) + "\n")
     o.write(feel + "\n")
-
-        
 
     if 'process' in request.POST:
         return redirect('upload_form:complete')
@@ -53,6 +62,10 @@ def form(request):
         destination.write(chunk)
 
     img = I.open(path)
+    exif = img._getexif()
+    if exif is not None:
+        orientation = exif.get(0x112, 1)
+        img = convert_image[orientation](img)
     width, height = img.size
     ratio = height / width
     img.resize((resize, int(resize*ratio))).save(os.path.join(UPLOADE_DIR, name + ".png"))
@@ -64,10 +77,10 @@ def form(request):
 
 def complete(request):
 
-    o = open(os.path.join(UPLOADE_DIR, 'height_weight.txt'))
+    o = open(os.path.join(UPLOADE_DIR, intermed_file))
     height = int(o.readline())
     weight = int(o.readline())
-    feel   = o.readline()
+    feel   = o.readline().strip()
 
     a = c.clothingSizeEstimator(
             os.path.join(UPLOADE_DIR, 'frontal.png'),

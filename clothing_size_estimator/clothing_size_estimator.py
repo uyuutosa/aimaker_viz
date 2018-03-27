@@ -44,6 +44,9 @@ class clothingSizeEstimator:
         self.lucas = LucasEstimator(lucas_path, height_cm, weight_kg)
         self.feel = feel
 
+    def _getCorrectValue(self):
+        return {'tight':0.1,'normal':0.2,'loose':0.3}[self.feel]
+
     def _correctIfLucasIsMoreProper(self, result_dic, key=None, lucas_key=None):
         if key is not None:
             if result_dic[key] > self.lucas[lucas_key]:
@@ -207,6 +210,8 @@ class clothingSizeEstimator:
         side_p_dic['chest']    = self._calcChestPoints(side_points)
         side_p_dic['waist']    = self._calcWaistPoints(side_points)
         side_p_dic['neck_width']    = self._calcSideNeckPoints(side_points)
+
+        self.frontal_points = frontal_points
 
         return frontal_p_dic, side_p_dic
 
@@ -481,6 +486,7 @@ class clothingSizeEstimator:
                                             self.frontal_ratio, 
                                             self.frontal_labeled_arr,
                                             name='neck_frontal_width',
+                                            correction_factor=self._getCorrectValue(),
                                             n_offset=(5, 1)
                                             )
         result_dic['neck_side_width']\
@@ -491,6 +497,7 @@ class clothingSizeEstimator:
                                            self.side_ratio, 
                                            self.side_labeled_arr,
                                            name='neck_side_width',
+                                           correction_factor=self._getCorrectValue(),
                                            n_offset=(5, 1)
                                            )
 
@@ -523,6 +530,7 @@ class clothingSizeEstimator:
                                             self.frontal_binary, 
                                             self.frontal_ratio, 
                                             self.frontal_labeled_arr,
+                                            correction_factor=self._getCorrectValue(),
                                             name='waist_frontal_width'
                                             )
         result_dic['waist_side_width']\
@@ -534,7 +542,7 @@ class clothingSizeEstimator:
                                            self.side_labeled_arr,
                                            name='waist_side_width',
                                            n_offset=(40, 1),
-                                           correction_factor=0.1
+                                           correction_factor=self._getCorrectValue(),
                                            )
 
         result_dic['waist_circumference']\
@@ -556,7 +564,7 @@ class clothingSizeEstimator:
                                             self.frontal_labeled_arr,
                                             name='chest_frontal_width',
                                             n_offset=(10, 1),
-                                            correction_factor=0.1,
+                                            correction_factor=self._getCorrectValue(),
                                             )
         result_dic['chest_side_width']\
                 = chest_side_width\
@@ -565,7 +573,7 @@ class clothingSizeEstimator:
                                            self.side_binary, 
                                            self.side_ratio, 
                                            self.side_labeled_arr,
-                                           correction_factor=0.1,
+                                           correction_factor=self._getCorrectValue(),
                                            name='chest_side_width'
                                            )
 
@@ -607,7 +615,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='left_fore_arm_width')
 
         result_dic['right_fore_arm_width']\
@@ -616,7 +624,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='right_fore_arm_width')
 
 
@@ -624,18 +632,15 @@ class clothingSizeEstimator:
         result_dic['fore_arm_circumference']\
             = self._calcCircleLength((left_fore_arm_width + right_fore_arm_width) / 4)
 
-        result_dic['fore_arm_length'] = self._calcLength(\
-                                            self.frontal_p_dic['left_fore_arm'],
-                                            self.frontal_p_dic['right_fore_arm'])
-
+        result_dic['fore_arm_length'] = self._calcLength(self.frontal_points, (6,7), (3, 4))
 
 
         return result_dic
 
-    def _calcLength(self, left_points, right_points):
-        p1, p2 = left_points
+    def _calcLength(self, df, left_indices, right_indices):
+        p1, p2 = df.ix[left_indices[0]], df.ix[left_indices[1]]
         left = linalg.norm(p1 - p2)
-        p1, p2 = right_points
+        p1, p2 = df.ix[right_indices[0]], df.ix[right_indices[1]]
         right = linalg.norm(p1 - p2)
         return (left + right) / 2 * self.frontal_ratio
 
@@ -647,7 +652,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='left_bicep_width')
 
         result_dic['right_bicep_width']\
@@ -656,17 +661,18 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='right_bicep_width')
 
 
+        #result_dic['bicep_circumference']\
+        #    = self._calcCircleLength((left_bicep_width + right_bicep_width) / 4)
 
-        result_dic['bicep_circumference']\
-            = self._calcCircleLength((left_bicep_width + right_bicep_width) / 4)
-
-        result_dic['bicep_length'] = self._calcLength(\
-                                            self.frontal_p_dic['left_bicep'],
-                                            self.frontal_p_dic['right_bicep'])
+#        result_dic['bicep_length'] = self._calcLength(\
+#                                            self.frontal_p_dic['left_bicep'],
+#                                            self.frontal_p_dic['right_bicep'])
+#
+        result_dic['bicep_length'] = self._calcLength(self.frontal_points, (6,7), (3, 4))
 
         return result_dic
 
@@ -678,7 +684,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='left_thigh_width')
 
         result_dic['right_thigh_width']\
@@ -687,7 +693,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='right_thigh_width')
 
 
@@ -696,9 +702,10 @@ class clothingSizeEstimator:
             = self._calcCircleLength((left_thigh_width + right_thigh_width) / 4)
 
 
-        result_dic['thigh_length'] = self._calcLength(\
-                                            self.frontal_p_dic['left_thigh'],
-                                            self.frontal_p_dic['right_thigh'])
+        result_dic['thigh_length'] = self._calcLength(self.frontal_points, (11,12), (8, 9))
+        #result_dic['thigh_length'] = self._calcLength(\
+        #                                    self.frontal_p_dic['left_thigh'],
+        #                                    self.frontal_p_dic['right_thigh'])
 
         return result_dic
 
@@ -710,7 +717,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='left_calf_width')
 
         result_dic['right_calf_width']\
@@ -719,7 +726,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='right_calf_width')
 
 
@@ -727,9 +734,10 @@ class clothingSizeEstimator:
         result_dic['calf_circumference']\
             = self._calcCircleLength((left_calf_width + right_calf_width) / 4)
 
-        result_dic['calf_length'] = self._calcLength(\
-                                            self.frontal_p_dic['left_calf'],
-                                            self.frontal_p_dic['right_calf'])
+        result_dic['calf_length'] = self._calcLength(self.frontal_points, (12,13), (9, 10))
+        #result_dic['calf_length'] = self._calcLength(\
+        #                                    self.frontal_p_dic['left_calf'],
+        #                                    self.frontal_p_dic['right_calf'])
 
         return result_dic
 
@@ -741,7 +749,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='ankle_left_frontal_width')
 
         result_dic['ankle_right_frontal_width']\
@@ -750,7 +758,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='ankle_right_frontal_width')
 
 
@@ -767,7 +775,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='wrist_left_frontal_width')
 
         result_dic['wrist_right_frontal_width']\
@@ -776,7 +784,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.2,
+                                        correction_factor=self._getCorrectValue(),
                                         name='wrist_right_frontal_width')
 
 
@@ -793,7 +801,7 @@ class clothingSizeEstimator:
                                         self.frontal_arr, 
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
-                                        correction_factor=0.1,
+                                        correction_factor=self._getCorrectValue(),
                                         name='hem_frontal_width')
 
         result_dic['hem_side_width']\
@@ -819,6 +827,7 @@ class clothingSizeEstimator:
                                        self.frontal_arr, 
                                        self.frontal_binary, 
                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                       correction_factor=self._getCorrectValue(),
                                        name = 'left_arm_width')
 
         result_dic['left_arm_circumference']\
@@ -831,6 +840,7 @@ class clothingSizeEstimator:
                                        self.frontal_arr, 
                                        self.frontal_binary, 
                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                       correction_factor=self._getCorrectValue(),
                                        name = 'right_arm_width')
 
         result_dic['right_arm_circumference']\
