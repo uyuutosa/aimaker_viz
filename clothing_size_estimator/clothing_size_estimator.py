@@ -129,16 +129,16 @@ class clothingSizeEstimator:
         self._initializeLabeledImage()
         result_dic = {}
         result_dic = self.estimateNeck(result_dic)
-        #result_dic = self.estimateShoulderWidth(result_dic)
-        #result_dic = self.estimateChestWidth(result_dic)
-        #result_dic = self.estimateWaist(result_dic)
-        #result_dic = self.estimateHem(result_dic)
-        #result_dic = self.estimateWrist(result_dic)
-        #result_dic = self.estimateForeArm(result_dic)
-        #result_dic = self.estimateBicep(result_dic)
-        #result_dic = self.estimateCalf(result_dic)
-        #result_dic = self.estimateThigh(result_dic)
-        #result_dic = self.estimateAnkle(result_dic)
+        result_dic = self.estimateShoulderWidth(result_dic)
+        result_dic = self.estimateBicep(result_dic)
+        result_dic = self.estimateForeArm(result_dic)
+        result_dic = self.estimateChestWidth(result_dic)
+        result_dic = self.estimateWaist(result_dic)
+        result_dic = self.estimateHem(result_dic)
+        result_dic = self.estimateWrist(result_dic)
+        result_dic = self.estimateThigh(result_dic)
+        result_dic = self.estimateCalf(result_dic)
+        result_dic = self.estimateAnkle(result_dic)
         return result_dic
 
     def _initializeLabeledImage(self):
@@ -165,15 +165,20 @@ class clothingSizeEstimator:
         ## for froontal images
         # point for calculate normal vector
         frontal_p_dic = {}
-        frontal_p_dic['left_wrist']        = array(frontal_points.ix[array([4,   3])])
-        frontal_p_dic['right_wrist']       = array(frontal_points.ix[array([7,   6])])
-        frontal_p_dic['left_arm']        = array(frontal_points.ix[array([6,   7])])
-        frontal_p_dic['right_arm']       = array(frontal_points.ix[array([3,   4])])
-        frontal_p_dic['right_arm']       = array(frontal_points.ix[array([3,   4])])
-        frontal_p_dic['right_shin']      = array(frontal_points.ix[array([9,  10])])
-        frontal_p_dic['left_shin']       = array(frontal_points.ix[array([12, 13])])
+        frontal_p_dic['left_bicep']      = self._calcLeftBicepPoints(frontal_points)
+        frontal_p_dic['right_bicep']     = self._calcRightBicepPoints(frontal_points)
+        frontal_p_dic['left_fore_arm']   = self._calcLeftForeArmPoints(frontal_points)
+        frontal_p_dic['right_fore_arm']  = self._calcRightForeArmPoints(frontal_points)
+        frontal_p_dic['left_wrist']      = array(frontal_points.ix[array([4,   3])])
+        frontal_p_dic['right_wrist']     = array(frontal_points.ix[array([7,   6])])
+        frontal_p_dic['left_thigh']      = self._calcLeftThighPoints(frontal_points)
+        frontal_p_dic['right_thigh']     = self._calcRightThighPoints(frontal_points)
+        frontal_p_dic['left_calf']       = self._calcLeftCalfPoints(frontal_points)
+        frontal_p_dic['right_calf']      = self._calcRightCalfPoints(frontal_points)
         frontal_p_dic['left_upper_arm']  =  self._calc_left_upper_arm_points(frontal_points)
         frontal_p_dic['right_upper_arm'] =  self._calc_right_upper_arm_points(frontal_points)
+        frontal_p_dic['left_ankle']      = array(frontal_points.ix[array([13,   12])])
+        frontal_p_dic['right_ankle']     = array(frontal_points.ix[array([10,   9])])
 
         # point for calculate tangent vector
         frontal_p_dic['shoulder'] = array(frontal_points.ix[array([2, 5])])
