@@ -7,7 +7,7 @@ import aimaker.predictor.segmentation_predictor as sp
 import subprocess as sb
 
 class LucasEstimator:
-    def __init__(self, path="./lucas.php", height, weight):
+    def __init__(self, path, height, weight):
         popen = sb.Popen("php {} {} {} ".format(height, weight).split(), stdout=s.PIPE)
         line = popen.communicate()[0]
         lst  = [{x[0].strip(b'"') : float(x[1].strip(b'"'))} for x in [x.split(b':') for x in b[12:].strip(b'{}').split(b',')]]
@@ -129,15 +129,16 @@ class clothingSizeEstimator:
         self._initializeLabeledImage()
         result_dic = {}
         result_dic = self.estimateNeck(result_dic)
-        #result_dic = self.estimateBody(result_dic)
         result_dic = self.estimateShoulderWidth(result_dic)
         result_dic = self.estimateChestWidth(result_dic)
-#        result_dic = self.estimateGirth(result_dic)
         result_dic = self.estimateWaist(result_dic)
         result_dic = self.estimateHem(result_dic)
         result_dic = self.estimateWrist(result_dic)
-        result_dic = self.estimateArmAround(result_dic)
-        result_dic = self.estimateUpperArmAround(result_dic)
+        result_dic = self.estimateForeArm(result_dic)
+        result_dic = self.estimateBicep(result_dic)
+        result_dic = self.estimateCalf(result_dic)
+        result_dic = self.estimateThigh(result_dic)
+        result_dic = self.estimateAnkle(result_dic)
         return result_dic
 
     def _initializeLabeledImage(self):

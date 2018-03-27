@@ -1,14 +1,24 @@
 {% extends "upload_form/base.html" %}
 
-{% block title %}アップローダサンプル{% endblock title %}
+{% block title %}bodygram v2{% endblock title %}
 {% block content %}
     <form method="POST" enctype="multipart/form-data">
+        <h1> Bodygram v2</h1>
+        <p>
+            <input type="file"   name="form">
+            <input type="submit" name="frontal" value='frontal'>
+            <input type="submit" name="side"    value='side'>
+        </p>
+        {% load static%}
+        <img src="{% static "posts/frontal.png"%}" style="max-height:500px"/>
+        <img src="{% static "posts/side.png"%}" style="max-height:500px"/>
         {% csrf_token %}
-        <input type="file" name="form">
-        <input type="submit" name="frontal" value="frontal">
-        <input type="submit" name="side"    value="side">
+        <p>Height:<input type="text"   name="height"></p>
+        <p>Weight:<input type="text"   name="weight"></p>
+
+        <br>
+        <br>
+        <br>
+        <p><input type="submit" name="process" value='process'></p>
     </form>
-    {% load static%}
-    <img src="{% static "posts/frontal.png"%}" style="max-height:500px"/>
-    <img src="{% static "posts/side.png"%}" style="max-height:500px"/>
 {% endblock content %}
