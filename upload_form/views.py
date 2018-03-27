@@ -33,7 +33,6 @@ def form(request):
 
     file = request.FILES['form']
 
-
     path = os.path.join(UPLOADE_DIR, name + ".png")
     #path = os.path.join(UPLOADE_DIR, file.name)
     destination = open(path, 'wb')
@@ -59,7 +58,7 @@ def complete(request):
             weight_kg=weight,
             )
 
-    a.getExtractBackgroundImages(transform="",gpu_id=0, divide_size=(1,1),pad=40,thresh=0)
+    a.getExtractBackgroundImages(transform="resize512x512",gpu_id=0, divide_size=(1,1),pad=40,thresh=0)
     a.getPoseImages(gpu_id=1)
     param = a.getImage()
     I.fromarray(a.frontal_outlined_arr.astype(uint8)).save('frontal_outline.png')
@@ -67,8 +66,10 @@ def complete(request):
     I.fromarray(a.frontal_labeled_arr.astype(uint8)).save('frontal_labeled.png')
     I.fromarray(a.side_labeled_arr.astype(uint8)).save('side_labeled.png')
     I.fromarray(a.frontal_binary.astype(uint8)).save('frontal_binary.png')
-    I.fromarray(a.slide_binary.astype(uint8)).save('side_binary.png')
+    I.fromarray(a.side_binary.astype(uint8)).save('side_binary.png')
     I.fromarray(a.frontal_pose_labeled_image.astype(uint8)).save('frontal_pose.png')
     I.fromarray(a.side_pose_labeled_image.astype(uint8)).save('side_pose.png')
+    I.fromarray(a.frontal_labeled_arr.astype(uint8)).save('frontal_estimate.png')
+    I.fromarray(a.side_labeled_arr.astype(uint8)).save('side_estimate.png')
 
     return render(request, 'upload_form/complete.html', param)

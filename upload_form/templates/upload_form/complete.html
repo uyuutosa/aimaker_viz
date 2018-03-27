@@ -3,15 +3,77 @@
 {% block title %}アップロード完了{% endblock title %}
 {% block content %}
     <div align="center">
-        <h1 align="center">アップロード完了</h1>
+        <h1 align="center">Processing result</h1>
         <a href="{% url 'upload_form:form' %}"><button>戻る</button></a>
     </div>
+    <table align='center' border=1>
+      <tr>
+        <td>param.</td>
+        <td>value</td>
+      </tr>
+      <tr>
+        <td>Neck Circum.</td>
+        <td>{{neck_circumference|floatformat}}</td>
+      </tr>
+      <tr>
+        <td>Bicep length</td>
+        <td>{{bicep_length|floatformat}}</td>
+      </tr>
+      <tr>
+        <td>Bicep Circum.</td>
+        <td>{{neck_circumference|floatformat}}</td>
+      </tr>
+      <tr>
+        <td>Fore arm length</td>
+        <td>{{fore_arm_length|floatformat}}</td>
+      </tr>
+      <tr>
+        <td>Fore arm circum.</td>
+        <td>{{fore_arm_circumference|floatformat}}</td>
+      </tr>
+      <tr>
+        <td>Wrist circum.</td>
+        <td>{{wrist_circumference|floatformat}}</td>
+      </tr>
+      <tr>
+        <td>Shoulder circum.</td>
+        <td>{{shoulder_width|floatformat}}</td>
+      </tr>
+      <tr>
+        <td>Chest circum.</td>
+        <td>{{chest_circumference|floatformat}}</td>
+      </tr>
+      <tr>
+        <td> Waist Circum.</td>
+        <td>{{waist_circumference|floatformat}}</td>
+      </tr>
+      <tr>
+        <td> Thigh length</td>
+        <td>{{thigh_length|floatformat}}</td>
+      </tr>
+      <tr>
+        <td> Thigh circum.</td>
+        <td>{{thigh_circumference|floatformat}}</td>
+      </tr>
+      <tr>
+        <td> Calf length</td>
+        <td>{{calf_length|floatformat}}</td>
+      </tr>
+      <tr>
+        <td> Calf circum.</td>
+        <td>{{calf_circumference|floatformat}}</td>
+      </tr>
+      <tr>
+        <td> Ankle circum.</td>
+        <td>{{ankle_circumference|floatformat}}</td>
+      </tr>
+    </table>
 
     {% load static%}
-    <img src="{% static "posts/frontal.png"%}" style="max-height:500px"/>
-    <img src="{% static "posts/side.png"%}" style="max-height:500px"/>
     <img src="{% static "posts/frontal_outlined.png"%}" style="max-height:500px"/>
     <img src="{% static "posts/side_outlined.png"%}" style="max-height:500px"/>
+    <img src="{% static "posts/frontal_estimate.png"%}" style="max-height:500px"/>
+    <img src="{% static "posts/side_estimate.png"%}" style="max-height:500px"/>
     <img src="{% static "posts/frontal_pose.png"%}" style="max-height:500px"/>
     <img src="{% static "posts/side_pose.png"%}" style="max-height:500px"/>
     <img src="{% static "posts/frontal_binary.png"%}" style="max-height:500px"/>

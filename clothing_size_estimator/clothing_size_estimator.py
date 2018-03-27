@@ -165,38 +165,40 @@ class clothingSizeEstimator:
         ## for froontal images
         # point for calculate normal vector
         frontal_p_dic = {}
-        frontal_p_dic['left_bicep']      = self._calcLeftBicepPoints(frontal_points)
-        frontal_p_dic['right_bicep']     = self._calcRightBicepPoints(frontal_points)
-        frontal_p_dic['left_fore_arm']   = self._calcLeftForeArmPoints(frontal_points)
-        frontal_p_dic['right_fore_arm']  = self._calcRightForeArmPoints(frontal_points)
+        frontal_p_dic['left_bicep']      = self._calcIntermedPoints(frontal_points, 5, 6)
+        frontal_p_dic['right_bicep']     = self._calcIntermedPoints(frontal_points, 2, 3)
+        frontal_p_dic['left_fore_arm']   = self._calcIntermedPoints(frontal_points, 6, 7)
+        frontal_p_dic['right_fore_arm']  = self._calcIntermedPoints(frontal_points, 3, 4)
         frontal_p_dic['left_wrist']      = array(frontal_points.ix[array([4,   3])])
         frontal_p_dic['right_wrist']     = array(frontal_points.ix[array([7,   6])])
-        frontal_p_dic['left_thigh']      = self._calcLeftThighPoints(frontal_points)
-        frontal_p_dic['right_thigh']     = self._calcRightThighPoints(frontal_points)
-        frontal_p_dic['left_calf']       = self._calcLeftCalfPoints(frontal_points)
-        frontal_p_dic['right_calf']      = self._calcRightCalfPoints(frontal_points)
-        frontal_p_dic['left_upper_arm']  = self._calc_left_upper_arm_points(frontal_points)
-        frontal_p_dic['right_upper_arm'] = self._calc_right_upper_arm_points(frontal_points)
+        frontal_p_dic['left_thigh']      = self._calcIntermedPoints(frontal_points, 11, 12)
+        frontal_p_dic['right_thigh']     = self._calcIntermedPoints(frontal_points,  8,  9)
+        frontal_p_dic['left_calf']       = self._calcIntermedPoints(frontal_points, 12, 13)
+        frontal_p_dic['right_calf']      = self._calcIntermedPoints(frontal_points,  9, 10)
         frontal_p_dic['left_ankle']      = array(frontal_points.ix[array([13,   12])])
         frontal_p_dic['right_ankle']     = array(frontal_points.ix[array([10,   9])])
 
         # point for calculate tangent vector
         frontal_p_dic['shoulder'] = array(frontal_points.ix[array([2, 5])])
         frontal_p_dic['hem']      = array(frontal_points.ix[array([8, 11])])
-        frontal_p_dic['chest']    = self._calc_chest_points(frontal_points)
-        frontal_p_dic['waist']    = self._calc_waist_points(frontal_points)
+        frontal_p_dic['chest']    = self._calcChestPoints(frontal_points)
+        frontal_p_dic['waist']    = self._calcWaistPoints(frontal_points)
         frontal_p_dic['neck_width']    = self._calcNeckPoints(frontal_points)
 
         ## for side images
         # point for calculate tangent vector
         side_p_dic = {}
         side_p_dic['shoulder'] = array(side_points.ix[array([2, 5])]) #to reviseion
-        side_p_dic['hem']      = self._calc_hem_points(side_points)
-        side_p_dic['chest']    = self._calc_chest_points(side_points)
-        side_p_dic['waist']    = self._calc_waist_points(side_points)
+        side_p_dic['hem']      = self._calcHemPoints(side_points)
+        side_p_dic['chest']    = self._calcChestPoints(side_points)
+        side_p_dic['waist']    = self._calcWaistPoints(side_points)
         side_p_dic['neck_width']    = self._calcSideNeckPoints(side_points)
 
         return frontal_p_dic, side_p_dic
+
+    def _calcIntermedPoints(self, points, i, j):
+        intermed = array((points.ix[i] + points.ix[j]) / 2)
+        return concatenate((intermed[None,:], array(points.ix[j])[None,:]), axis=0)
 
     def _drawOutline(self, binary, raw, offset_info):
         imgEdge, contours, hierarchy = cv2.findContours(binary, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
@@ -223,7 +225,8 @@ class clothingSizeEstimator:
 
         return concatenate((array(points.ix[1]) + distance / 4 * t, array(points.ix[16])[None,:]), axis=0)
 
-    def _calc_waist_points(self, points):
+
+    def _calcWaistPoints(self, points):
         center_hip_point = array((points.ix[8] + points.ix[11]) / 2)
         t = (array(points.ix[1]) - center_hip_point)[None,:]
         distance = linalg.norm(t)
@@ -231,7 +234,7 @@ class clothingSizeEstimator:
         t /= distance
         return concatenate((center_hip_point + distance / 3 * t, array(points.ix[1])[None,:]), axis=0)
 
-    def _calc_chest_points(self, points):
+    def _calcChestPoints(self, points):
         center_hip_point = array((points.ix[8] + points.ix[11]) / 2)
         t = (array(points.ix[1]) - center_hip_point)[None,:]
         distance = linalg.norm(t)
@@ -239,17 +242,9 @@ class clothingSizeEstimator:
         t /= distance
         return concatenate((center_hip_point + distance * 3 / 4 * t, array(points.ix[1])[None,:]), axis=0)
 
-    def _calc_hem_points(self, points):
+    def _calcHemPoints(self, points):
         center_hip_point = array((points.ix[8] + points.ix[11]) / 2)
         return concatenate((center_hip_point[None, :], array(points.ix[1])[None,:]), axis=0)
-
-    def _calc_left_upper_arm_points(self, points):
-        upper_arm_point = array((points.ix[5] + points.ix[6]) / 2)
-        return concatenate((upper_arm_point[None, :], array(points.ix[6])[None,:]), axis=0)
-
-    def _calc_right_upper_arm_points(self, points):
-        upper_arm_point = array((points.ix[2] + points.ix[3]) / 2)
-        return concatenate((upper_arm_point[None, :], array(points.ix[3])[None,:]), axis=0)
 
     def _getBinaryImage(self, arr, thresh=5):
         kernel = ones((5,5),np.uint8)
@@ -457,11 +452,6 @@ class clothingSizeEstimator:
                  loc2, 
                  (0, 255, 0), 2)
                 
-        #cv2.putText(labeled_arr, str(int(length))+"cm", tuple(ini.astype(int)), font, 1.5, (255,0,0), 2)
-        #if name is not None:
-        #    cv2.putText(labeled_arr, name, tuple((ini-20).astype(int)), font, 1.5, (255,0,0), 2)
-
-                
         return length 
 
 
@@ -497,8 +487,6 @@ class clothingSizeEstimator:
 
         return result_dic
 
-    def estimateBody(self, result_dic):
-        return result_dic
 
     def estimateShoulderWidth(self, result_dic):
         result_dic['shoulder_width'] = self._calcTangentDistance(
@@ -622,7 +610,20 @@ class clothingSizeEstimator:
         result_dic['fore_arm_circumference']\
             = self._calcCircleLength((left_fore_arm_width + right_fore_arm_width) / 4)
 
+        result_dic['fore_arm_length'] = self._calcLength(\
+                                            self.frontal_p_dic['left_fore_arm'],
+                                            self.frontal_p_dic['right_fore_arm'])
+
+
+
         return result_dic
+
+    def _calcLength(self, left_points, right_points):
+        p1, p2 = left_points
+        left = linalg.norm(p1 - p2)
+        p1, p2 = right_points
+        right = linalg.norm(p1 - p2)
+        return (left + right) / 2 * self.frontal_ratio
 
     def estimateBicep(self, result_dic):
         #上腕
@@ -648,6 +649,10 @@ class clothingSizeEstimator:
 
         result_dic['bicep_circumference']\
             = self._calcCircleLength((left_bicep_width + right_bicep_width) / 4)
+
+        result_dic['bicep_length'] = self._calcLength(\
+                                            self.frontal_p_dic['left_bicep'],
+                                            self.frontal_p_dic['right_bicep'])
 
         return result_dic
 
@@ -676,6 +681,11 @@ class clothingSizeEstimator:
         result_dic['thigh_circumference']\
             = self._calcCircleLength((left_thigh_width + right_thigh_width) / 4)
 
+
+        result_dic['thigh_length'] = self._calcLength(\
+                                            self.frontal_p_dic['left_thigh'],
+                                            self.frontal_p_dic['right_thigh'])
+
         return result_dic
 
     def estimateCalf(self, result_dic):
@@ -702,6 +712,10 @@ class clothingSizeEstimator:
 
         result_dic['calf_circumference']\
             = self._calcCircleLength((left_calf_width + right_calf_width) / 4)
+
+        result_dic['calf_length'] = self._calcLength(\
+                                            self.frontal_p_dic['left_calf'],
+                                            self.frontal_p_dic['right_calf'])
 
         return result_dic
 
