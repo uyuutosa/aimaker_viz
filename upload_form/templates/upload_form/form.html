@@ -1,31 +1,46 @@
 {% extends "upload_form/base.html" %}
 
-{% block title %}bodygram v2{% endblock title %}
+{% block title %}Bodygram v2{% endblock title %}
 {% block content %}
+
+    <h1> Bodygram v2</h1>
+    <h2>1. Please take photos from the front and side.</h2>
+    {% load static%}
+    <img src="{% static "posts/notice.png"%}" style="max-height:300px"/>
+    <br>
+    <br>
+    <h2>2. Select the front/side photo and push the 'front'/'side' button.</h2>
     <form method="POST" enctype="multipart/form-data">
-        <h1> Bodygram v2</h1>
         <p>
             <input type="file"   name="form">
             <input type="submit" name="frontal" value='frontal'>
             <input type="submit" name="side"    value='side'>
         </p>
-        {% load static%}
         <img src="{% static "posts/frontal.png"%}" style="max-height:500px"/>
         <img src="{% static "posts/side.png"%}" style="max-height:500px"/>
         {% csrf_token %}
-        <p>Height:<input type="text"   name="height"></p>
-        <p>Weight:<input type="text"   name="weight"></p>
 
         <br>
-        <br>
-        <br>
-        <p><input type="submit" name="process" value='process'></p>
+        <h2>3. Input a body parameters 'Height' and 'Weight'.</h2>
+        <p>Height:<input type="text"   name="height">
+            <input type="radio" name="unit_height" value='cm' checked>cm
+            <input type="radio" name="unit_height" value="ft'in">ft'in
+        </p>
+        <p>Weight:<input type="text"   name="weight">
+            <input type="radio" name="unit_weight" value='kg' checked>kg
+            <input type="radio" name="unit_weight" value='lb'>lb
+        </p>
+
+        <p><input type="submit" name="process" value='process'>
+        </p>
         <h5>What kind of clothes are you wearing?</h5>
         <p>
         <input type="radio" name="cloth" value='Tight'>Tight
         <input type="radio" name="cloth" value='Normal' checked>Normal
         <input type="radio" name="cloth" value='Loose'>Loose
         </p>
+        <br>
+        <hr>
         <h4>Dubug parameters<h4>
         <p>resize:<input type="text" name="resize" value='512'></p>
 

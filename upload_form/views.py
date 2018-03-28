@@ -25,11 +25,27 @@ convert_image = {
     8: lambda img: img.transpose(I.ROTATE_90),                                    # 反時計回りに90度回転
 }
 
+
+
 def form(request):
     if request.method != 'POST':
         return render(request, 'upload_form/form.html')
 
-    height = request.POST['height']
+    if "ft'in" in request.POST['unit_height']:
+        feet, inch = request.POST['height'].split("'")
+        height = float(feet) * 30.48 + float(inch) * 2.54
+    else:
+        height = request.POST['height']
+
+    if "lb" in request.POST['unit_weight']:
+        lb = request.POST['weight']
+        weight = float(lb) * 0.45359237  
+    else:
+        weight = request.POST['weight']
+
+        
+        
+
     weight = request.POST['weight']
     resize = int(request.POST['resize'])
 
