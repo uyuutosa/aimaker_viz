@@ -1,12 +1,16 @@
 {% extends "upload_form/base.html" %}
 
-{% block title %}アップロード完了{% endblock title %}
+{% block title %}Procesinng result{% endblock title %}
 {% block content %}
     <div align="center">
         <h1 align="center">Processing result</h1>
         <a href="{% url 'upload_form:form' %}"><button>戻る</button></a>
     </div>
-    <table align='center' border=1>
+    <table align='center' border=0 align=left>
+        <tr>
+        <td>
+    <table align='center' border=1 align=left>
+    <caption>Body parameters</caption>
       <tr>
         <td>param.</td>
         <td>value est. by Own [cm]</td>
@@ -82,6 +86,29 @@
         <td>{{ankle_circumference|floatformat}}</td>
         <td>{{lucas_ankle_circumference|floatformat}}</td>
       </tr>
+    </table>
+
+        </td>
+        <td>
+    <table align='center' border=1>
+    <caption>Crothing parameters</caption>
+      <tr>
+        <td>param.</td>
+        <td>value est. by Own [cm]</td>
+        <td>value est. by Lucas [cm]</td>
+      </tr>
+        <td>Sleeve length</td>
+        <td>{{sleeve_length|floatformat}}</td>
+        <td>{{lucas_sleeve_length|floatformat}}</td>
+      </tr>
+      <tr>
+        <td>Trouser length</td>
+        <td>{{trouser_length|floatformat}}</td>
+        <td>{{lucas_trouser_length|floatformat}}</td>
+      </tr>
+    </table>
+        <td>
+    </tr>
     </table>
 
     {% load static%}

@@ -47,11 +47,11 @@ class clothingSizeEstimator:
     def _getCorrectValue(self):
         return {'tight':0.1,'normal':0.2,'loose':0.3}[self.feel]
 
-    def _correctIfLucasIsMoreProper(self, result_dic, key=None, lucas_key=None):
+    def _correctIfLucasIsMoreProper(self, result_dic, point_dic, key=None, lucas_key=None):
         if key is not None:
             if result_dic[key] > self.lucas[lucas_key]:
                 result_dic[key] = self.lucas[lucas_key]
-        return result_dic
+        return result_dic, point_dic
                 
 
     def getExtractBackgroundImages(self,
@@ -145,17 +145,20 @@ class clothingSizeEstimator:
 
         self._initializeLabeledImage()
         result_dic = {}
-        result_dic = c(self.estimateNeck(result_dic))#, 'neck_circumference', b'neck')
-        result_dic = c(self.estimateShoulderWidth(result_dic))#, 'shoulder_width', b'shoulder')
-        result_dic = c(self.estimateBicep(result_dic))
-        result_dic = c(self.estimateForeArm(result_dic))
-        result_dic = c(self.estimateChestWidth(result_dic))#, 'chest_circumference', b'chest')
-        result_dic = c(self.estimateWaist(result_dic))
-        result_dic = c(self.estimateHem(result_dic))
-        result_dic = c(self.estimateWrist(result_dic))
-        result_dic = c(self.estimateThigh(result_dic))
-        result_dic = c(self.estimateCalf(result_dic))
-        result_dic = c(self.estimateAnkle(result_dic))
+        point_dic = {}
+        result_dic, point_dic = c(*self.estimateNeck(result_dic, point_dic))#, 'neck_circumference', b'neck')
+        result_dic, point_dic = c(*self.estimateShoulderWidth(result_dic, point_dic))#, 'shoulder_width', b'shoulder')
+        result_dic, point_dic = c(*self.estimateBicep(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateForeArm(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateChestWidth(result_dic, point_dic))#, 'chest_circumference', b'chest')
+        result_dic, point_dic = c(*self.estimateWaist(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateHem(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateWrist(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateThigh(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateCalf(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateAnkle(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateSleeve(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateTrouserLength(result_dic, point_dic))
         return result_dic
 
     def _initializeLabeledImage(self):
@@ -400,7 +403,8 @@ class clothingSizeEstimator:
         #    cv2.putText(labeled_arr, name, tuple((ini-20).astype(int)), font, 1.5, (255,0,0), 2)
         #else:
         #    print("none is detected")
-        return length 
+        points = (array([x,y]), array([x2,y2]))
+        return length, points
 
     def _calcNormalDistance(self, 
                             points, 
@@ -412,6 +416,7 @@ class clothingSizeEstimator:
                             name=None,
                             n_offset=(1, 1),
                             correction_factor=0.2
+                            limit_boundary=None
                             ):
         x_lst = []
         y_lst = []
@@ -437,6 +442,9 @@ class clothingSizeEstimator:
                     x,y = (ini + i*n).astype(int)
                     if not binary[y, x]:
                         break
+                    #elif limit_boundary:
+
+                        
                 
                 for i in range(max_length):
                     x2,y2 = (ini + i*(-n)).astype(int)
@@ -479,15 +487,53 @@ class clothingSizeEstimator:
                  loc2, 
                  (0, 255, 0), 2)
                 
-        return length 
+        points = (array([x,y]), array([x2,y2]))
+        return length, points
 
 
 
         
-    def estimateNeck(self, result_dic):
+    def estimateSleeve(self, result_dic, point_dic):
+        # 袖の長さ
+        left_wrist_p1, left_wrist_p2   = point_dic['wrist_left_frontal_width']
+        right_wrist_p1, right_wrist_p2 = point_dic['wrist_right_frontal_width']
+        shoulder_p1, shoulder_p2       = point_dic['shoulder_width']
+
+        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p1), tuple(right_wrist_p2), (0, 0, 255), 2)
+        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p2), tuple(left_wrist_p1), (0, 0, 255), 2)
+
+        result_dic['left_sleeve_length']   = left  = linalg.norm(shoulder_p1 - right_wrist_p2) * self.frontal_ratio
+        result_dic['right_sleeve_length']  = right = linalg.norm(shoulder_p2 - left_wrist_p1) * self.frontal_ratio
+        result_dic['sleeve_length'] = (left + right) / 2
+        result_dic['lucas_sleeve_length'] = self.lucas[b'shirt_sleeve']
+
+        return result_dic, point_dic
+
+    def estimateTrouserLength(self, result_dic, point_dic):
+        # 袖の長さ
+        hem_p1,  hem_p2           = point_dic['hem_frontal_width']
+        left_ankle_p1, left_ankle_p2  = point_dic['ankle_left_frontal_width']
+        right_ankle_p1, right_ankle_p2  = point_dic['ankle_right_frontal_width']
+
+        hem_p1[1] -= hem_p1[1] * 0.05
+        hem_p2[1] -= hem_p2[1] * 0.05
+
+        cv2.line(self.frontal_labeled_arr, tuple(hem_p1), tuple(left_ankle_p2), (0, 0, 255), 2)
+        cv2.line(self.frontal_labeled_arr, tuple(hem_p2), tuple(right_ankle_p1), (0, 0, 255), 2)
+
+        
+
+        result_dic['left_trouser_length']  = left = linalg.norm(hem_p1 - left_ankle_p2) * self.frontal_ratio
+        result_dic['right_trouser_length'] = right = linalg.norm(hem_p2 - right_ankle_p1) * self.frontal_ratio
+        result_dic['trouser_length']       = (left + right) / 2
+        #result_dic['lucas_sleeve_length'] = self.lucas[b'shirt_sleeve']
+
+        return result_dic, point_dic
+
+    def estimateNeck(self, result_dic, point_dic):
         #  首
-        result_dic['neck_frontal_width']\
-                = neck_frontal_width\
+        result_dic['neck_frontal_width'], point_dic['neck_frontal_width']\
+                = neck_frontal_width, _\
                 = self._calcNormalDistance(self.frontal_p_dic['neck_width'], 
                                             self.frontal_arr, 
                                             self.frontal_binary, 
@@ -497,8 +543,8 @@ class clothingSizeEstimator:
                                             correction_factor=self._getCorrectValue(),
                                             n_offset=(30, 1)
                                             )
-        result_dic['neck_side_width']\
-                = neck_side_width\
+        result_dic['neck_side_width'], point_dic['neck_side_width']\
+                = neck_side_width, _\
                 = self._calcNormalDistance(self.side_p_dic['neck_width'],
                                            self.side_arr,
                                            self.side_binary, 
@@ -516,11 +562,11 @@ class clothingSizeEstimator:
 
         result_dic['lucas_neck_circumference'] = self.lucas[b'neck']
 
-        return result_dic
+        return result_dic, point_dic
 
 
-    def estimateShoulderWidth(self, result_dic):
-        result_dic['shoulder_width'] = self._calcNormalDistance(
+    def estimateShoulderWidth(self, result_dic, point_dic):
+        result_dic['shoulder_width'], point_dic['shoulder_width'] = self._calcNormalDistance(
                 self.frontal_p_dic['shoulder'], 
                 self.frontal_arr, 
                 self.frontal_binary, 
@@ -531,13 +577,13 @@ class clothingSizeEstimator:
                 )
 
         result_dic['lucas_shoulder_width'] = self.lucas[b'shoulder']
-        return result_dic
+        return result_dic, point_dic
 
-    def estimateWaist(self, result_dic):
+    def estimateWaist(self, result_dic, point_dic):
 
         # 胸回り 
-        result_dic['waist_frontal_width']\
-                = waist_frontal_width\
+        result_dic['waist_frontal_width'], point_dic['waist_frontal_width']\
+                = waist_frontal_width, _\
                 = self._calcNormalDistance(self.frontal_p_dic['waist'], 
                                             self.frontal_arr, 
                                             self.frontal_binary, 
@@ -546,8 +592,8 @@ class clothingSizeEstimator:
                                             correction_factor=self._getCorrectValue(),
                                             name='waist_frontal_width'
                                             )
-        result_dic['waist_side_width']\
-                = waist_side_width\
+        result_dic['waist_side_width'], point_dic['waist_side_width']\
+                = waist_side_width, _\
                 = self._calcNormalDistance(self.side_p_dic['waist'],
                                            self.side_arr,
                                            self.side_binary, 
@@ -565,13 +611,13 @@ class clothingSizeEstimator:
 
         result_dic['lucas_waist_circumference'] = self.lucas[b'waist']
 
-        return result_dic
+        return result_dic, point_dic
 
-    def estimateChestWidth(self, result_dic):
+    def estimateChestWidth(self, result_dic, point_dic):
 
         # 胸回り 
-        result_dic['chest_frontal_width']\
-                = chest_frontal_width\
+        result_dic['chest_frontal_width'], point_dic['chest_frontal_width']\
+                = chest_frontal_width, _\
                 = self._calcNormalDistance(self.frontal_p_dic['chest'], 
                                             self.frontal_arr, 
                                             self.frontal_binary, 
@@ -581,8 +627,8 @@ class clothingSizeEstimator:
                                             n_offset=(10, 1),
                                             correction_factor=self._getCorrectValue(),
                                             )
-        result_dic['chest_side_width']\
-                = chest_side_width\
+        result_dic['chest_side_width'], point_dic['chest_side_width']\
+                = chest_side_width, _\
                 = self._calcNormalDistance(self.side_p_dic['chest'],
                                            self.side_arr,
                                            self.side_binary, 
@@ -599,7 +645,7 @@ class clothingSizeEstimator:
 
         result_dic['lucas_chest_circumference'] = self.lucas[b'chest']
 
-        return result_dic
+        return result_dic, point_dic
 
 
     #def estimateGirth(self, result_dic):
@@ -624,10 +670,10 @@ class clothingSizeEstimator:
 
     #    return result_dic
 
-    def estimateForeArm(self, result_dic):
+    def estimateForeArm(self, result_dic, point_dic):
         #裾周り
-        result_dic['left_fore_arm_width']\
-            = left_fore_arm_width\
+        result_dic['left_fore_arm_width'], point_dic['left_fore_arm_width']\
+            = left_fore_arm_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_fore_arm'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -635,8 +681,8 @@ class clothingSizeEstimator:
                                         correction_factor=self._getCorrectValue(),
                                         name='left_fore_arm_width')
 
-        result_dic['right_fore_arm_width']\
-            = right_fore_arm_width\
+        result_dic['right_fore_arm_width'], point_dic['right_fore_arm_width']\
+            = right_fore_arm_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_fore_arm'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -652,7 +698,7 @@ class clothingSizeEstimator:
         result_dic['fore_arm_length'] = self._calcLength(self.frontal_points, (6,7), (3, 4))
 
 
-        return result_dic
+        return result_dic, point_dic
 
     def _calcLength(self, df, left_indices, right_indices):
         p1, p2 = df.ix[left_indices[0]], df.ix[left_indices[1]]
@@ -661,10 +707,10 @@ class clothingSizeEstimator:
         right = linalg.norm(p1 - p2)
         return (left + right) / 2 * self.frontal_ratio
 
-    def estimateBicep(self, result_dic):
+    def estimateBicep(self, result_dic, point_dic):
         #上腕
-        result_dic['left_bicep_width']\
-            = left_bicep_width\
+        result_dic['left_bicep_width'], point_dic['left_bicep_width']\
+            = left_bicep_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_bicep'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -672,8 +718,8 @@ class clothingSizeEstimator:
                                         correction_factor=self._getCorrectValue(),
                                         name='left_bicep_width')
 
-        result_dic['right_bicep_width']\
-            = right_bicep_width\
+        result_dic['right_bicep_width'], point_dic['right_bicep_width']\
+            = right_bicep_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_bicep'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -691,12 +737,12 @@ class clothingSizeEstimator:
 #
         result_dic['bicep_length'] = self._calcLength(self.frontal_points, (6,7), (3, 4))
 
-        return result_dic
+        return result_dic, point_dic
 
-    def estimateThigh(self, result_dic):
+    def estimateThigh(self, result_dic, point_dic):
         #上腕
-        result_dic['left_thigh_width']\
-            = left_thigh_width\
+        result_dic['left_thigh_width'], point_dic['left_thigh_width'], \
+            = left_thigh_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_thigh'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -704,8 +750,8 @@ class clothingSizeEstimator:
                                         correction_factor=self._getCorrectValue(),
                                         name='left_thigh_width')
 
-        result_dic['right_thigh_width']\
-            = right_thigh_width\
+        result_dic['right_thigh_width'], point_dic['right_thigh_width']\
+            = right_thigh_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_thigh'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -724,12 +770,12 @@ class clothingSizeEstimator:
         #                                    self.frontal_p_dic['left_thigh'],
         #                                    self.frontal_p_dic['right_thigh'])
 
-        return result_dic
+        return result_dic, point_dic
 
-    def estimateCalf(self, result_dic):
+    def estimateCalf(self, result_dic, point_dic):
         #上腕
-        result_dic['left_calf_width']\
-            = left_calf_width\
+        result_dic['left_calf_width'], point_dic['left_calf_width']\
+            = left_calf_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_calf'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -737,8 +783,8 @@ class clothingSizeEstimator:
                                         correction_factor=self._getCorrectValue(),
                                         name='left_calf_width')
 
-        result_dic['right_calf_width']\
-            = right_calf_width\
+        result_dic['right_calf_width'], point_dic['right_calf_width']\
+            = right_calf_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_calf'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -756,12 +802,12 @@ class clothingSizeEstimator:
         #                                    self.frontal_p_dic['left_calf'],
         #                                    self.frontal_p_dic['right_calf'])
 
-        return result_dic
+        return result_dic, point_dic
 
-    def estimateAnkle(self, result_dic):
+    def estimateAnkle(self, result_dic, point_dic):
         #裾周り
-        result_dic['ankle_left_frontal_width']\
-            = ankle_left_frontal_width\
+        result_dic['ankle_left_frontal_width'], point_dic['ankle_left_frontal_width']\
+            = ankle_left_frontal_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_ankle'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -769,8 +815,8 @@ class clothingSizeEstimator:
                                         correction_factor=self._getCorrectValue(),
                                         name='ankle_left_frontal_width')
 
-        result_dic['ankle_right_frontal_width']\
-            = ankle_right_frontal_width\
+        result_dic['ankle_right_frontal_width'], point_dic['ankle_right_frontal_width']\
+            = ankle_right_frontal_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_ankle'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -782,12 +828,12 @@ class clothingSizeEstimator:
         result_dic['ankle_circumference']\
             = self._calcCircleLength((ankle_left_frontal_width + ankle_right_frontal_width) / 4)
 
-        return result_dic
+        return result_dic, point_dic
 
-    def estimateWrist(self, result_dic):
+    def estimateWrist(self, result_dic, point_dic):
         #裾周り
-        result_dic['wrist_left_frontal_width']\
-            = wrist_left_frontal_width\
+        result_dic['wrist_left_frontal_width'], point_dic['wrist_left_frontal_width']\
+            = wrist_left_frontal_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_wrist'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -795,8 +841,8 @@ class clothingSizeEstimator:
                                         correction_factor=self._getCorrectValue(),
                                         name='wrist_left_frontal_width')
 
-        result_dic['wrist_right_frontal_width']\
-            = wrist_right_frontal_width\
+        result_dic['wrist_right_frontal_width'], point_dic['wrist_right_frontal_width']\
+            = wrist_right_frontal_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_wrist'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -808,12 +854,12 @@ class clothingSizeEstimator:
         result_dic['wrist_circumference']\
             = self._calcCircleLength((wrist_left_frontal_width + wrist_right_frontal_width) / 4)
 
-        return result_dic
+        return result_dic, point_dic
 
-    def estimateHem(self, result_dic):
+    def estimateHem(self, result_dic, point_dic):
         #裾周り
-        result_dic['hem_frontal_width']\
-            = hem_frontal_width\
+        result_dic['hem_frontal_width'], point_dic['hem_frontal_width']\
+            = hem_frontal_width, _\
             = self._calcTangentDistance(self.frontal_p_dic['hem'], 
                                         self.frontal_arr, 
                                         self.frontal_binary, 
@@ -821,8 +867,8 @@ class clothingSizeEstimator:
                                         correction_factor=self._getCorrectValue(),
                                         name='hem_frontal_width')
 
-        result_dic['hem_side_width']\
-            = hem_side_width\
+        result_dic['hem_side_width'], point_dic['hem_side_width']\
+            = hem_side_width, _\
             = self._calcNormalDistance(self.side_p_dic['hem'],  
                                        self.side_arr, 
                                        self.side_binary, 
@@ -836,42 +882,7 @@ class clothingSizeEstimator:
 
         result_dic['lucas_hem_circumference'] = self.lucas[b'hip']
 
-        return result_dic
-
-    def estimateArmAround(self, result_dic):
-        # 上腕
-        result_dic['left_arm_width']\
-            = left_arm_width\
-            = self._calcNormalDistance(self.frontal_p_dic['left_arm'], 
-                                       self.frontal_arr, 
-                                       self.frontal_binary, 
-                                       self.frontal_ratio, self.frontal_labeled_arr,
-                                       correction_factor=self._getCorrectValue(),
-                                       name = 'left_arm_width')
-
-        result_dic['left_arm_circumference']\
-            = left_arm_circumference\
-            = self._calcCircleLength(left_arm_width / 2)
-
-        result_dic['right_arm_width']\
-            = right_arm_width\
-            = self._calcNormalDistance(self.frontal_p_dic['right_arm'], 
-                                       self.frontal_arr, 
-                                       self.frontal_binary, 
-                                       self.frontal_ratio, self.frontal_labeled_arr,
-                                       correction_factor=self._getCorrectValue(),
-                                       name = 'right_arm_width')
-
-        result_dic['right_arm_circumference']\
-            = right_arm_circumference\
-            = self._calcCircleLength(right_arm_width / 2)
-
-
-        result_dic['arm_circumference']\
-                = arm_circumference\
-                = (right_arm_circumference + left_arm_circumference) / 2
-        return result_dic
-
+        return result_dic, point_dic
 
     def _calcEllipseLength(self, a, b):
         return pi * (a + b) * (1 + (3 * ((a - b) / (a + b)) ** 2) / (10 + sqrt(4 - 3 * (a - b) / (a + b)) ** 2))
