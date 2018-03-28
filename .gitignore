@@ -3,3 +3,4 @@
 *.clean
 *.jpeg
 *.caffemodel
+!notice.png
