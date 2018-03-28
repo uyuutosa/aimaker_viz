@@ -11,15 +11,32 @@
     <br>
     <h2>2. Select the front/side photo and push the 'front'/'side' button.</h2>
     <form method="POST" enctype="multipart/form-data">
+        <table align='center' border=0 align=left>
+        <tr>
+        <td>
         <p>
             <input type="file"   name="form">
             <input type="submit" name="frontal" value='front'>
             <input type="submit" name="side"    value='side'>
 			<font color="red">{{file_is_not_set}}</font>
         </p>
+        </td>
+        </tr>
+        <tr>
+        <td>
+        <figure id='front' style='text-align:center'>
         <img src="{% static "posts/frontal.png"%}?v={{query_for_frontal}}" style="max-height:500px"/>
-
+        <figcaption>Front image</figcaption>
+        </td>
+        <td>
+        </figure>
+        <figure id='side' style='text-align:center'>
         <img src="{% static "posts/side.png"%}?v={{query_for_side}}" style="max-height:500px"/>
+        <figcaption>Side image</figcaption>
+        </figure>
+        </td>
+        </tr>
+        </table>
         {% csrf_token %}
 
         <br>

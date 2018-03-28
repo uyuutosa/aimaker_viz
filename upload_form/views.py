@@ -46,7 +46,7 @@ def form(request):
     else:
         weight = request.POST['weight']
 
-    if "gpu_ids" in request.POST['unit_weight']:
+    if "gpu_ids" in request.POST['gpu_ids']:
         gpu_ids = request.POST['gpu_ids']
 
     else:
@@ -110,8 +110,8 @@ def form(request):
 def complete(request):
 
     o = open(os.path.join(UPLOADE_DIR, intermed_file))
-    height   = int(o.readline())
-    weight   = int(o.readline())
+    height   = int(float(o.readline()))
+    weight   = int(float(o.readline()))
     feel     = o.readline().strip()
     gpu_ids  = [int(x) for x in o.readline().strip().split(",")]
 
