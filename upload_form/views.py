@@ -43,6 +43,12 @@ def form(request):
     else:
         weight = request.POST['weight']
 
+    if "gpu_ids" in request.POST['unit_weight']:
+        gpu_ids = request.POST['gpu_ids']
+
+    else:
+        gpu_ids = "0,0"
+
         
         
 
@@ -60,6 +66,7 @@ def form(request):
     o.write(str(height) + "\n")
     o.write(str(weight) + "\n")
     o.write(feel + "\n")
+    o.write(gpu_ids + "\n")
 
     if 'process' in request.POST:
         return redirect('upload_form:complete')
@@ -94,9 +101,10 @@ def form(request):
 def complete(request):
 
     o = open(os.path.join(UPLOADE_DIR, intermed_file))
-    height = int(o.readline())
-    weight = int(o.readline())
-    feel   = o.readline().strip()
+    height   = int(o.readline())
+    weight   = int(o.readline())
+    feel     = o.readline().strip()
+    gpu_ids  = [int(x) for x in o.readline().strip().split(",")]
 
     a = c.clothingSizeEstimator(
             os.path.join(UPLOADE_DIR, 'frontal.png'),
@@ -106,8 +114,8 @@ def complete(request):
             feel=feel
             )
 
-    a.getExtractBackgroundImages(transform="",gpu_id=0, divide_size=(1,1),pad=40,thresh=0)
-    a.getPoseImages(gpu_id=1)
+    a.getExtractBackgroundImages(transform="", gpu_id=gpu_ids[0], divide_size=(1,1),pad=40,thresh=0)
+    a.getPoseImages(gpu_id=gpu_ids[1])
     param = a.getImage()
     I.fromarray(a.frontal_outlined_arr.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'frontal_outline.png'))
     I.fromarray(a.side_outlined_arr.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'side_outline.png'))
