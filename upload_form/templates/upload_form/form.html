@@ -15,9 +15,11 @@
             <input type="file"   name="form">
             <input type="submit" name="frontal" value='front'>
             <input type="submit" name="side"    value='side'>
+			<font color="red">{{file_is_not_set}}</font>
         </p>
-        <img src="{% static "posts/frontal.png"%}" style="max-height:500px"/>
-        <img src="{% static "posts/side.png"%}" style="max-height:500px"/>
+        <img src="{% static "posts/frontal.png"%}?v={{query_for_frontal}}" style="max-height:500px"/>
+
+        <img src="{% static "posts/side.png"%}?v={{query_for_side}}" style="max-height:500px"/>
         {% csrf_token %}
 
         <br>

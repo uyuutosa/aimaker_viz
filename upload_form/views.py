@@ -4,6 +4,7 @@ from django.shortcuts import render
 
 from django.shortcuts import render, redirect
 from django.template.context_processors import csrf
+from django.core.cache import cache
 from django.conf import settings
 from upload_form.models import FileNameModel
 import sys, os
@@ -28,6 +29,8 @@ convert_image = {
 
 
 def form(request):
+    param ={"query_for_frontal":str(random.randint(0, 10000)), "query_for_side":str(random.randint(0, 10000))}
+
     if request.method != 'POST':
         return render(request, 'upload_form/form.html')
 
@@ -75,7 +78,11 @@ def form(request):
     else:
         name = 'side'
 
-    file = request.FILES['form']
+    try:
+        file = request.FILES['form']
+    except:
+        param.update({'file_is_not_set':'File is not set'})
+        return render(request, 'upload_form/form.html', param)
 
     #path = os.path.join(UPLOADE_DIR, name + ".png")
     path = os.path.join(UPLOADE_DIR, file.name)
@@ -96,7 +103,9 @@ def form(request):
     insert_data = FileNameModel(file_name = file.name)
     insert_data.save()
 
-    return redirect('upload_form:form')
+    #return redirect('upload_form:form')
+    cache.clear()
+    return render(request, 'upload_form/form.html', param)
 
 def complete(request):
 
