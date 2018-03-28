@@ -148,12 +148,12 @@ class clothingSizeEstimator:
         point_dic = {}
         result_dic, point_dic = c(*self.estimateNeck(result_dic, point_dic))#, 'neck_circumference', b'neck')
         result_dic, point_dic = c(*self.estimateShoulderWidth(result_dic, point_dic))#, 'shoulder_width', b'shoulder')
-        result_dic, point_dic = c(*self.estimateBicep(result_dic, point_dic))
         result_dic, point_dic = c(*self.estimateForeArm(result_dic, point_dic))
         result_dic, point_dic = c(*self.estimateChestWidth(result_dic, point_dic))#, 'chest_circumference', b'chest')
         result_dic, point_dic = c(*self.estimateWaist(result_dic, point_dic))
         result_dic, point_dic = c(*self.estimateHem(result_dic, point_dic))
         result_dic, point_dic = c(*self.estimateWrist(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateBicep(result_dic, point_dic))
         result_dic, point_dic = c(*self.estimateThigh(result_dic, point_dic))
         result_dic, point_dic = c(*self.estimateCalf(result_dic, point_dic))
         result_dic, point_dic = c(*self.estimateAnkle(result_dic, point_dic))
@@ -189,8 +189,8 @@ class clothingSizeEstimator:
         frontal_p_dic['right_bicep']     = self._calcIntermedPoints(frontal_points, 2, 3)
         frontal_p_dic['left_fore_arm']   = self._calcIntermedPoints(frontal_points, 6, 7)
         frontal_p_dic['right_fore_arm']  = self._calcIntermedPoints(frontal_points, 3, 4)
-        frontal_p_dic['left_wrist']      = array(frontal_points.ix[array([4,   3])])
-        frontal_p_dic['right_wrist']     = array(frontal_points.ix[array([7,   6])])
+        frontal_p_dic['left_wrist']     = array(frontal_points.ix[array([7,   6])])
+        frontal_p_dic['right_wrist']      = array(frontal_points.ix[array([4,   3])])
         frontal_p_dic['left_thigh']      = self._calcIntermedPoints(frontal_points, 11, 12)
         frontal_p_dic['right_thigh']     = self._calcIntermedPoints(frontal_points,  8,  9)
         frontal_p_dic['left_calf']       = self._calcIntermedPoints(frontal_points, 12, 13)
@@ -336,7 +336,8 @@ class clothingSizeEstimator:
                              max_length=1000, 
                              name=None,
                              n_offset=(1,1),
-                             correction_factor=0.2
+                             correction_factor=0.0,
+                             limit_boundary=None
                              ):
         x_lst = []
         y_lst = []
@@ -385,6 +386,22 @@ class clothingSizeEstimator:
         y = y_arr[length_arr.argmin()]
         t = t_arr[length_arr.argmin()]
 
+
+        if limit_boundary is not None:
+            p1, p2 = array([x,y]), array([x2,y2])
+            point = self._getIntersection(p1, p2, *limit_boundary)
+            dist1 = linalg.norm(p1 - point)
+            dist2 = linalg.norm(p2 - point)
+            dist3 = linalg.norm(p2 - p1)
+            if dist1 < dist2:
+                if dist3 > dist1:
+                    x2,y2 = point
+            else:
+                if dist3 > dist2:
+                    x,y = point
+            #cv2.circle(labeled_arr, tuple(limit_boundary[0]), 7, (0, 0, 255), -1)
+            #cv2.circle(labeled_arr, tuple(limit_boundary[1]), 7, (0, 255, 0), -1)
+
         distance = linalg.norm(array([x2,y2]) - array([x,y])) 
         length = distance * ratio * (1 - correction_factor)
 
@@ -415,7 +432,7 @@ class clothingSizeEstimator:
                             max_length=1000,
                             name=None,
                             n_offset=(1, 1),
-                            correction_factor=0.2
+                            correction_factor=0.0,
                             limit_boundary=None
                             ):
         x_lst = []
@@ -442,7 +459,7 @@ class clothingSizeEstimator:
                     x,y = (ini + i*n).astype(int)
                     if not binary[y, x]:
                         break
-                    #elif limit_boundary:
+
 
                         
                 
@@ -475,11 +492,30 @@ class clothingSizeEstimator:
         y = y_arr[length_arr.argmin()]
         n = n_arr[length_arr.argmin()]
 
+
+
+
+        if limit_boundary is not None:
+            p1, p2 = array([x,y]), array([x2,y2])
+            point = self._getIntersection(p1, p2, *limit_boundary)
+            dist1 = linalg.norm(p1 - point)
+            dist2 = linalg.norm(p2 - point)
+            dist3 = linalg.norm(p2 - p1)
+            if dist1 < dist2:
+                if dist3 > dist2:
+                    x2,y2 = point
+            else:
+                if dist3 > dist1:
+                    x,y = point
+            #cv2.circle(labeled_arr, tuple(limit_boundary[0]), 7, (0, 0, 255), -1)
+            #cv2.circle(labeled_arr, tuple(limit_boundary[1]), 7, (0, 255, 0), -1)
+
         distance = linalg.norm(array([x2,y2]) - array([x,y])) 
         length = distance * ratio * (1 - correction_factor)
-
+                
         loc  = tuple((array([x, y]) - n * distance * correction_factor/2).astype(int))
         loc2 = tuple((array([x2, y2]) + n * distance * correction_factor/2).astype(int))
+
         cv2.circle(labeled_arr, loc, 4, 255, -1)
         cv2.circle(labeled_arr, loc2, 4, 255, -1)
         cv2.line(labeled_arr, 
@@ -499,21 +535,36 @@ class clothingSizeEstimator:
         right_wrist_p1, right_wrist_p2 = point_dic['wrist_right_frontal_width']
         shoulder_p1, shoulder_p2       = point_dic['shoulder_width']
 
-        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p1), tuple(right_wrist_p2), (0, 0, 255), 2)
-        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p2), tuple(left_wrist_p1), (0, 0, 255), 2)
+        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p2), tuple(right_wrist_p1), (0, 0, 255), 2)
+        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p1), tuple(left_wrist_p2), (0, 0, 255), 2)
 
-        result_dic['left_sleeve_length']   = left  = linalg.norm(shoulder_p1 - right_wrist_p2) * self.frontal_ratio
-        result_dic['right_sleeve_length']  = right = linalg.norm(shoulder_p2 - left_wrist_p1) * self.frontal_ratio
+        result_dic['left_sleeve_length']   = left  = linalg.norm(shoulder_p2 - right_wrist_p1) * self.frontal_ratio
+        result_dic['right_sleeve_length']  = right = linalg.norm(shoulder_p1 - left_wrist_p2) * self.frontal_ratio
         result_dic['sleeve_length'] = (left + right) / 2
         result_dic['lucas_sleeve_length'] = self.lucas[b'shirt_sleeve']
 
         return result_dic, point_dic
+
+    def _getIntersection(self, p1, p2, p3, p4):
+        a = (p2[1] - p1[1]) / (p2[0] - p1[0])
+        b = p1[1] - a * p1[0] 
+    
+        c = (p4[1] - p3[1]) / (p4[0] - p3[0])
+        d = p3[1] - c * p3[0] 
+    
+        #print("a={:.2f}, b={:.2f}, c={:.2f}, d={:.2f}".format(a, b, c, d))
+
+        #input(array([(d-b)/(a-c), (a*d-b*c)/(a-c)]).astype(int))
+        return array([(d-b)/(a-c), (a*d-b*c)/(a-c)]).astype(int)
+
 
     def estimateTrouserLength(self, result_dic, point_dic):
         # 袖の長さ
         hem_p1,  hem_p2           = point_dic['hem_frontal_width']
         left_ankle_p1, left_ankle_p2  = point_dic['ankle_left_frontal_width']
         right_ankle_p1, right_ankle_p2  = point_dic['ankle_right_frontal_width']
+        left_calf_p1, left_calf_p2  = point_dic['left_calf_width']
+        right_calf_p1, right_calf_p2  = point_dic['right_calf_width']
 
         hem_p1[1] -= hem_p1[1] * 0.05
         hem_p2[1] -= hem_p2[1] * 0.05
@@ -521,11 +572,18 @@ class clothingSizeEstimator:
         cv2.line(self.frontal_labeled_arr, tuple(hem_p1), tuple(left_ankle_p2), (0, 0, 255), 2)
         cv2.line(self.frontal_labeled_arr, tuple(hem_p2), tuple(right_ankle_p1), (0, 0, 255), 2)
 
-        
+
+        crotch_point = self._getIntersection(left_calf_p2, left_ankle_p1, right_calf_p1, right_ankle_p2)
+
+        cv2.line(self.frontal_labeled_arr, tuple(crotch_point), tuple(left_ankle_p1), (0, 0, 255), 2)
+        cv2.line(self.frontal_labeled_arr, tuple(crotch_point), tuple(right_ankle_p2), (0, 0, 255), 2)
 
         result_dic['left_trouser_length']  = left = linalg.norm(hem_p1 - left_ankle_p2) * self.frontal_ratio
         result_dic['right_trouser_length'] = right = linalg.norm(hem_p2 - right_ankle_p1) * self.frontal_ratio
         result_dic['trouser_length']       = (left + right) / 2
+        result_dic['left_trouser_inside_length']  = left = linalg.norm(crotch_point  - left_ankle_p1) * self.frontal_ratio
+        result_dic['right_trouser_inside_length'] = right = linalg.norm(crotch_point - right_ankle_p2) * self.frontal_ratio
+        result_dic['trouser_inside_length']       = (left + right) / 2
         #result_dic['lucas_sleeve_length'] = self.lucas[b'shirt_sleeve']
 
         return result_dic, point_dic
@@ -709,6 +767,7 @@ class clothingSizeEstimator:
 
     def estimateBicep(self, result_dic, point_dic):
         #上腕
+        p3, p4 = point_dic['wrist_left_frontal_width'][0], point_dic['left_fore_arm_width'][1]
         result_dic['left_bicep_width'], point_dic['left_bicep_width']\
             = left_bicep_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_bicep'], 
@@ -716,8 +775,10 @@ class clothingSizeEstimator:
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
-                                        name='left_bicep_width')
+                                        name='left_bicep_width',
+                                        limit_boundary=(p3, p4))
 
+        p3, p4 = point_dic['wrist_right_frontal_width'][1], point_dic['right_fore_arm_width'][0]
         result_dic['right_bicep_width'], point_dic['right_bicep_width']\
             = right_bicep_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_bicep'], 
@@ -725,7 +786,9 @@ class clothingSizeEstimator:
                                         self.frontal_binary, 
                                         self.frontal_ratio, self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
-                                        name='right_bicep_width')
+                                        name='right_bicep_width',
+                                        limit_boundary=(p3, p4)
+                                        )
 
 
         #result_dic['bicep_circumference']\
