@@ -145,11 +145,11 @@ class clothingSizeEstimator:
 
         self._initializeLabeledImage()
         result_dic = {}
-        result_dic = c(self.estimateNeck(result_dic), 'neck_circumference', b'neck')
-        result_dic = c(self.estimateShoulderWidth(result_dic), 'shoulder_width', b'shoulder')
+        result_dic = c(self.estimateNeck(result_dic))#, 'neck_circumference', b'neck')
+        result_dic = c(self.estimateShoulderWidth(result_dic))#, 'shoulder_width', b'shoulder')
         result_dic = c(self.estimateBicep(result_dic))
         result_dic = c(self.estimateForeArm(result_dic))
-        result_dic = c(self.estimateChestWidth(result_dic), 'chest_circumference', b'chest')
+        result_dic = c(self.estimateChestWidth(result_dic))#, 'chest_circumference', b'chest')
         result_dic = c(self.estimateWaist(result_dic))
         result_dic = c(self.estimateHem(result_dic))
         result_dic = c(self.estimateWrist(result_dic))
@@ -196,7 +196,7 @@ class clothingSizeEstimator:
         frontal_p_dic['right_ankle']     = array(frontal_points.ix[array([10,   9])])
 
         # point for calculate tangent vector
-        frontal_p_dic['shoulder'] = array(frontal_points.ix[array([2, 5])])
+        frontal_p_dic['shoulder'] = self._calcShoulderPoints(frontal_points)#array(frontal_points.ix[array([2, 5])])
         frontal_p_dic['hem']      = array(frontal_points.ix[array([8, 11])])
         frontal_p_dic['chest']    = self._calcChestPoints(frontal_points)
         frontal_p_dic['waist']    = self._calcWaistPoints(frontal_points)
@@ -205,7 +205,7 @@ class clothingSizeEstimator:
         ## for side images
         # point for calculate tangent vector
         side_p_dic = {}
-        side_p_dic['shoulder'] = array(side_points.ix[array([2, 5])]) #to reviseion
+        side_p_dic['shoulder'] = self._calcShoulderPoints(frontal_points)#array(side_points.ix[array([2, 5])]) #to reviseion
         side_p_dic['hem']      = self._calcHemPoints(side_points)
         side_p_dic['chest']    = self._calcChestPoints(side_points)
         side_p_dic['waist']    = self._calcWaistPoints(side_points)
@@ -225,7 +225,7 @@ class clothingSizeEstimator:
         cnt = contours[argmax(lst)]
         cnt[:,0,0] += offset_info["x"]
         cnt[:,0,1] += offset_info["y"]
-        return cv2.drawContours(raw.copy(),[cnt.astype(int32)] , -1, (0,255,0), 2).astype(uint8)#[...,::-1]
+        return cv2.drawContours(raw.copy(),[cnt.astype(int32)] , -1, (0,255,0), 1).astype(uint8)#[...,::-1]
 
     def _calcNeckPoints(self, points):
         t = (array(points.ix[0]) - points.ix[1])[None,:]* 1.
@@ -252,6 +252,14 @@ class clothingSizeEstimator:
         
         t /= distance
         return concatenate((center_hip_point + distance / 3 * t, array(points.ix[1])[None,:]), axis=0)
+
+    def _calcShoulderPoints(self, points):
+        center_hip_point = array((points.ix[8] + points.ix[11]) / 2)
+        t = (array(points.ix[1]) - center_hip_point)[None,:]
+        distance = linalg.norm(t)
+        
+        t /= distance
+        return concatenate((center_hip_point + distance * 21 / 20 * t, array(points.ix[1])[None,:]), axis=0)
 
     def _calcChestPoints(self, points):
         center_hip_point = array((points.ix[8] + points.ix[11]) / 2)
@@ -487,7 +495,7 @@ class clothingSizeEstimator:
                                             self.frontal_labeled_arr,
                                             name='neck_frontal_width',
                                             correction_factor=self._getCorrectValue(),
-                                            n_offset=(5, 1)
+                                            n_offset=(30, 1)
                                             )
         result_dic['neck_side_width']\
                 = neck_side_width\
@@ -498,7 +506,7 @@ class clothingSizeEstimator:
                                            self.side_labeled_arr,
                                            name='neck_side_width',
                                            correction_factor=self._getCorrectValue(),
-                                           n_offset=(5, 1)
+                                           n_offset=(30, 1)
                                            )
 
         result_dic['neck_circumference']\
@@ -506,18 +514,23 @@ class clothingSizeEstimator:
                         neck_frontal_width / 2, 
                         neck_side_width / 2)
 
+        result_dic['lucas_neck_circumference'] = self.lucas[b'neck']
+
         return result_dic
 
 
     def estimateShoulderWidth(self, result_dic):
-        result_dic['shoulder_width'] = self._calcTangentDistance(
+        result_dic['shoulder_width'] = self._calcNormalDistance(
                 self.frontal_p_dic['shoulder'], 
                 self.frontal_arr, 
                 self.frontal_binary, 
                 self.frontal_ratio, 
                 self.frontal_labeled_arr,
+                n_offset=(1, 1),
                 name='shoulder_width'
                 )
+
+        result_dic['lucas_shoulder_width'] = self.lucas[b'shoulder']
         return result_dic
 
     def estimateWaist(self, result_dic):
@@ -541,7 +554,7 @@ class clothingSizeEstimator:
                                            self.side_ratio, 
                                            self.side_labeled_arr,
                                            name='waist_side_width',
-                                           n_offset=(40, 1),
+                                           n_offset=(1, 1),
                                            correction_factor=self._getCorrectValue(),
                                            )
 
@@ -549,6 +562,8 @@ class clothingSizeEstimator:
                 = self._calcEllipseLength(
                         waist_frontal_width / 2, 
                         waist_side_width / 2)
+
+        result_dic['lucas_waist_circumference'] = self.lucas[b'waist']
 
         return result_dic
 
@@ -581,6 +596,8 @@ class clothingSizeEstimator:
                 = self._calcEllipseLength(
                         chest_frontal_width / 2, 
                         chest_side_width / 2)
+
+        result_dic['lucas_chest_circumference'] = self.lucas[b'chest']
 
         return result_dic
 
@@ -816,6 +833,8 @@ class clothingSizeEstimator:
         result_dic['hem_circumference']\
             = self._calcEllipseLength(hem_frontal_width / 2, 
                                       hem_side_width / 2)
+
+        result_dic['lucas_hem_circumference'] = self.lucas[b'hip']
 
         return result_dic
 
