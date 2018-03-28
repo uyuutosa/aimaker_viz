@@ -13,7 +13,7 @@
     <form method="POST" enctype="multipart/form-data">
         <p>
             <input type="file"   name="form">
-            <input type="submit" name="frontal" value='frontal'>
+            <input type="submit" name="frontal" value='front'>
             <input type="submit" name="side"    value='side'>
         </p>
         <img src="{% static "posts/frontal.png"%}" style="max-height:500px"/>
@@ -31,14 +31,18 @@
             <input type="radio" name="unit_weight" value='lb'>lb
         </p>
 
-        <p><input type="submit" name="process" value='process'>
-        </p>
-        <h5>What kind of clothes are you wearing?</h5>
+        <br>
+        <h2>4. Please choose the type of clothing you are wearing.</h5>
         <p>
         <input type="radio" name="cloth" value='Tight'>Tight
         <input type="radio" name="cloth" value='Normal' checked>Normal
         <input type="radio" name="cloth" value='Loose'>Loose
         </p>
+
+        <h2>5. Please press the 'process' button to start sizing.</h5>
+        <div align=center >
+        <p><input type="submit" name="process" value='process'style="font-size:2.4em; WIDTH: 200px; HEIGHT: 100px"></p>
+        </div>
         <br>
         <hr>
         <h4>Dubug parameters<h4>
