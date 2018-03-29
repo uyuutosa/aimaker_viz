@@ -11,8 +11,9 @@ class LucasEstimator:
         print("php {} {} {}".format(path, height, weight))
         popen = sb.Popen("php {} {} {}".format(path, height, weight).split(), stdout=sb.PIPE)
         line = popen.communicate()[0]
+        self.line = line
         print(line)
-        lst  = [{x[0].strip(b'"') : float(x[1].strip(b'"'))} for x in [x.split(b':') for x in line[12:].strip(b'{}').split(b',')]]
+        lst  = [{x[0].strip(b'"') : float(x[1].strip(b'"'))} for x in [x.split(b':') for x in line[2:].strip(b'{}').split(b',')]]
         print(lst)
         self.param_dic = {}
         [self.param_dic.update(x) for x in lst]                                                                              
@@ -22,6 +23,48 @@ class LucasEstimator:
         return self.param_dic[key]
         
 
+class TrueCondition:
+    def __init__(self):
+        pass
+
+    def __call__(self, p1, p2, p3, p4):
+        return True
+
+class AngleBoundaryCondition:
+    def __init__(self, min_angle, max_angle, vec):
+        self.min_angle, self.max_angle = min_angle, max_angle
+        self.vec = array(vec)
+
+    def __call__(self, p1, p2, p3, p4):
+        x2,y2 = p3 - p4
+        theta = abs((angle(x2 + y2 * 1.j) - angle(self.vec[0] + self.vec[1] * 1.j))  / pi * 180)
+        print("angle is {}".format(theta))
+        return theta > self.min_angle and theta <  self.max_angle
+        
+        
+
+#class evaluator:
+#    def __init__(self):
+#        pass
+#
+#    def setCondition(self, func):
+#        self.func = func
+#            
+#    def setPonits(self,p1, p2, p3, p4):
+#        self.p1 = p1
+#        self.p2 = p2
+#        self.p3 = p3
+#        self.p4 = p4
+#
+#    def eval(self):
+#        return self.func()
+#
+#    def _angleBoundaryCondition(self, min_angle, max_angle):
+#        class minmax:
+
+        
+
+
 class clothingSizeEstimator:
     def __init__(self, 
                  frontal_image_path, 
@@ -29,7 +72,8 @@ class clothingSizeEstimator:
                  height_cm=175,
                  weight_kg=65,
                  lucas_path="./lucas.php",
-                 feel='normal'):
+                 feel='normal',
+                 bicep_critical_value=(0,40)):
 
         self.frontal_image_path = frontal_image_path
         self.side_image_path    = side_image_path
@@ -43,6 +87,7 @@ class clothingSizeEstimator:
         self.weight_kg = weight_kg
         self.lucas = LucasEstimator(lucas_path, height_cm, weight_kg)
         self.feel = feel
+        self.bicep_critical_value = bicep_critical_value
 
     def _getCorrectValue(self):
         return {'tight':0.1,'normal':0.2,'loose':0.3}[self.feel]
@@ -159,6 +204,7 @@ class clothingSizeEstimator:
         result_dic, point_dic = c(*self.estimateCalf(result_dic, point_dic))
         result_dic, point_dic = c(*self.estimateAnkle(result_dic, point_dic))
         result_dic, point_dic = c(*self.estimateTrouserLength(result_dic, point_dic))
+        result_dic, point_dic = c(*self.estimateBodyLength(result_dic, point_dic))
         return result_dic
 
     def _initializeLabeledImage(self):
@@ -511,16 +557,16 @@ class clothingSizeEstimator:
 
         for limit_boundary in limit_boundaries:
             p1, p2 = array([x,y]), array([x2,y2])
-            p3, p4, which_restrict = limit_boundary
+            p3, p4, which_restrict, condition = limit_boundary
             point = self._getIntersection(p1, p2, p3, p4)
             dist1 = linalg.norm(p1 - point)
             dist2 = linalg.norm(p2 - point)
             dist3 = linalg.norm(p2 - p1)
             if which_restrict == 2:
-                if dist3 > dist2:
+                if dist3 > dist2 and condition(p1,p2,p3,p4):
                     x2,y2 = point
             else:
-                if dist3 > dist1:
+                if dist3 > dist1 and condition(p1,p2,p3,p4):
                     x,y = point
 
             #cv2.circle(labeled_arr, tuple(limit_boundary[0]), 7, (0, 0, 255), -1)
@@ -551,14 +597,22 @@ class clothingSizeEstimator:
         right_wrist_p1, right_wrist_p2 = point_dic['wrist_right_frontal_width']
         shoulder_p1, shoulder_p2       = point_dic['shoulder_width']
 
+        dist1 = linalg.norm(shoulder_p1 - left_wrist_p2)
+        dist2 = linalg.norm(shoulder_p2 - right_wrist_p1)
 
-        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p1), tuple(left_wrist_p2), (0, 0, 255), 2)
-        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p2), tuple(right_wrist_p1), (0, 0, 255), 2)
+        t1 = (left_wrist_p2  - shoulder_p1) / dist1
+        t2 = (right_wrist_p1 - shoulder_p2) / dist2
+
+        dist1 += 2.2 / self.frontal_ratio
+        dist2 += 2.2 / self.frontal_ratio
+
+        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p1), tuple((shoulder_p1 + t1 * dist1).astype(int)), (0, 0, 255), 2)
+        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p2), tuple((shoulder_p2 + t2 * dist2).astype(int)), (0, 0, 255), 2)
 
         result_dic['left_sleeve_length']   = left  = linalg.norm(shoulder_p1 - left_wrist_p2) * self.frontal_ratio
         result_dic['right_sleeve_length']  = right = linalg.norm(shoulder_p2 - right_wrist_p1) * self.frontal_ratio
         result_dic['sleeve_length'] = (left + right) / 2
-        result_dic['lucas_sleeve_length'] = self.lucas[b'shirt_sleeve']
+        result_dic['lucas_sleeve_length'] = self.lucas[b'long_sleeve']
 
         point_dic['left_sleeve']  = (shoulder_p1, left_wrist_p2)
         point_dic['right_sleeve'] = (shoulder_p2, right_wrist_p1)
@@ -587,6 +641,26 @@ class clothingSizeEstimator:
 
         y = contour[:, 0, 1]
         return contour[y.argmin()][0]
+
+
+    def estimateBodyLength(self, result_dic, point_dic):
+        p1 = point_dic['neck_frontal_width'][0]
+        t = array([0,1.0])
+        p2 = p1 + t * 10
+        p3, p4 = point_dic['hem_frontal_width']
+        p5 = (p3 + p4) / 2
+        p5[0] = p1[0]
+        #p5 = self._getIntersection(p1, p2, p3, p4)
+
+        dist = linalg.norm(p5 - p1) + 10 / self.frontal_ratio
+        print(p5)
+        print(tuple(p1.astype(int)), tuple((p1 + t * dist).astype(int)))
+        cv2.line(self.frontal_labeled_arr, tuple(p1.astype(int)), tuple((p1 + t * dist).astype(int)), (0, 0, 255), 2)
+
+        result_dic['body_length'] = dist * self.frontal_ratio
+        result_dic['lucas_body_length'] = self.lucas[b'shirt_sleeve']
+
+        return result_dic, point_dic
 
 
     def estimateTrouserLength(self, result_dic, point_dic):
@@ -721,7 +795,7 @@ class clothingSizeEstimator:
                                             name='chest_frontal_width',
                                             n_offset=(10, 1),
                                             correction_factor=self._getCorrectValue(),
-                                            limit_boundaries=[(p3, p4, 2), (p5, p6, 1)])
+                                            limit_boundaries=[(p3, p4, 2, TrueCondition()), (p5, p6, 1, TrueCondition())])
         result_dic['chest_side_width'], point_dic['chest_side_width']\
                 = chest_side_width, _\
                 = self._calcNormalDistance(self.side_p_dic['chest'],
@@ -818,7 +892,7 @@ class clothingSizeEstimator:
                                         self.frontal_ratio, self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='left_bicep_width',
-                                        limit_boundaries=[(p3, p4, 2)])
+                                        limit_boundaries=[(p3, p4, 2, AngleBoundaryCondition(*self.bicep_critical_value, (0, 1)))])
 
         p1, p2 = point_dic['right_sleeve']
         n = (p1-p2) / linalg.norm(p1-p2)
@@ -836,7 +910,7 @@ class clothingSizeEstimator:
                                         self.frontal_ratio, self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='right_bicep_width',
-                                        limit_boundaries=[(p3, p4, 1)]
+                                        limit_boundaries=[(p3, p4, 1, AngleBoundaryCondition(*self.bicep_critical_value, (0, 1)))]
                                         )
 
 
