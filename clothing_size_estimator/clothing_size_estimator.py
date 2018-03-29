@@ -113,11 +113,11 @@ class clothingSizeEstimator:
         self.frontal_binary = self._getBinaryImage(self.frontal_arr, thresh=thresh)
         self.side_binary    = self._getBinaryImage(self.side_arr, thresh=thresh)
 
-        self.frontal_outlined_arr = self._drawOutline(self.frontal_binary,
+        self.frontal_outlined_arr, self.frontal_contour = self._drawOutline(self.frontal_binary,
                                                       self.frontal_raw_arr,
                                                       self.frontal_offset_info)
 
-        self.side_outlined_arr = self._drawOutline(self.side_binary,
+        self.side_outlined_arr, self.side_contour = self._drawOutline(self.side_binary,
                                                       self.side_raw_arr,
                                                       self.side_offset_info)
 
@@ -191,8 +191,8 @@ class clothingSizeEstimator:
         frontal_p_dic['right_fore_arm']  = self._calcIntermedPoints(frontal_points, 3, 4)
         frontal_p_dic['left_wrist']     = array(frontal_points.ix[array([7,   6])])
         frontal_p_dic['right_wrist']      = array(frontal_points.ix[array([4,   3])])
-        frontal_p_dic['left_thigh']      = self._calcIntermedPoints(frontal_points, 11, 12)
-        frontal_p_dic['right_thigh']     = self._calcIntermedPoints(frontal_points,  8,  9)
+        frontal_p_dic['left_thigh']      = self._calcIntermedPoints(frontal_points, 11, 12, 0.8)
+        frontal_p_dic['right_thigh']     = self._calcIntermedPoints(frontal_points,  8,  9, 0.8)
         frontal_p_dic['left_calf']       = self._calcIntermedPoints(frontal_points, 12, 13)
         frontal_p_dic['right_calf']      = self._calcIntermedPoints(frontal_points,  9, 10)
         frontal_p_dic['left_ankle']      = array(frontal_points.ix[array([13,   12])])
@@ -218,17 +218,33 @@ class clothingSizeEstimator:
 
         return frontal_p_dic, side_p_dic
 
-    def _calcIntermedPoints(self, points, i, j):
+
+    def _calcIntermedPoints(self, points, i, j, ratio=0.5):
+        dist = linalg.norm(points.ix[i] - points.ix[j])
+        t = (points.ix[j] - points.ix[i])/ dist
         intermed = array((points.ix[i] + points.ix[j]) / 2)
-        return concatenate((intermed[None,:], array(points.ix[j])[None,:]), axis=0)
+        return concatenate(((array(points.ix[i]) + ratio * dist * t)[None,:] , array(points.ix[j])[None,:]), axis=0)
+    #def _calcIntermedPoints(self, points, i, j, ratio=0.5):
+    #    points.ix[i] + points.ix[j]
+    #    intermed = array((points.ix[i] + points.ix[j]) / 2)
+    #    return concatenate((intermed[None,:], array(points.ix[j])[None,:]), axis=0)
+
 
     def _drawOutline(self, binary, raw, offset_info):
+        raw = raw.copy()
         imgEdge, contours, hierarchy = cv2.findContours(binary, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         lst = [len(x) for x in contours]
-        cnt = contours[argmax(lst)]
-        cnt[:,0,0] += offset_info["x"]
-        cnt[:,0,1] += offset_info["y"]
-        return cv2.drawContours(raw.copy(),[cnt.astype(int32)] , -1, (0,255,0), 1).astype(uint8)#[...,::-1]
+        cnt = contours[argmax(lst)].copy()
+        cnt_for_draw = contours[argmax(lst)]
+        cnt_for_draw[:,0,0] += offset_info["x"]
+        cnt_for_draw[:,0,1] += offset_info["y"]
+
+
+
+        ##savetxt("value.txt", cnt[:, 0, :].T)
+
+        return cv2.drawContours(raw.copy(),[cnt_for_draw.astype(int32)] , -1, (0,255,0), 1).astype(uint8), cnt
+        #wreturn raw, cnt
 
     def _calcNeckPoints(self, points):
         t = (array(points.ix[0]) - points.ix[1])[None,:]* 1.
@@ -561,6 +577,17 @@ class clothingSizeEstimator:
         #input(array([(d-b)/(a-c), (a*d-b*c)/(a-c)]).astype(int))
         return array([(d-b)/(a-c), (a*d-b*c)/(a-c)]).astype(int)
 
+    def _calcCrotchPoint(self, contour):
+        y = contour[:, 0, 1]
+        crit = y.max() - (y.max() - y.min()) * 0.05
+        c = crit < y
+        contour = contour[c.argmax():c.size - c[::-1].argmax()]
+        #for i, p in enumerate(contour):
+        #    cv2.circle(self.frontal_outlined_arr, tuple(p[0]), 4, (0, i, i), -1)
+
+        y = contour[:, 0, 1]
+        return contour[y.argmin()][0]
+
 
     def estimateTrouserLength(self, result_dic, point_dic):
         # 袖の長さ
@@ -577,7 +604,9 @@ class clothingSizeEstimator:
         cv2.line(self.frontal_labeled_arr, tuple(hem_p2), tuple(right_ankle_p1), (0, 0, 255), 2)
 
 
-        crotch_point = self._getIntersection(left_calf_p2, left_ankle_p1, right_calf_p1, right_ankle_p2)
+        #crotch_point = self._getIntersection(left_calf_p2, left_ankle_p1, right_calf_p1, right_ankle_p2)
+        crotch_point = self._calcCrotchPoint(self.frontal_contour)
+        print(crotch_point)
 
         cv2.line(self.frontal_labeled_arr, tuple(crotch_point), tuple(left_ankle_p1), (0, 0, 255), 2)
         cv2.line(self.frontal_labeled_arr, tuple(crotch_point), tuple(right_ankle_p2), (0, 0, 255), 2)
