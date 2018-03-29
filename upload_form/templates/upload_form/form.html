@@ -20,18 +20,18 @@
             <input type="submit" name="side"    value='side'>
 			<font color="red">{{file_is_not_set}}</font>
         </p>
-        </td>
-        </tr>
+    </td>
+    </tr>
         <tr>
         <td>
         <figure id='front' style='text-align:center'>
-        <img src="{% static "posts/frontal.png"%}?v={{query_for_frontal}}" style="max-height:500px"/>
+        <img src="{% static "posts/frontal_raw.png"%}?v={{query_for_frontal}}" style="max-height:500px"/>
         <figcaption>Front image</figcaption>
         </td>
         <td>
         </figure>
         <figure id='side' style='text-align:center'>
-        <img src="{% static "posts/side.png"%}?v={{query_for_side}}" style="max-height:500px"/>
+        <img src="{% static "posts/side_raw.png"%}?v={{query_for_side}}" style="max-height:500px"/>
         <figcaption>Side image</figcaption>
         </figure>
         </td>

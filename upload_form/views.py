@@ -46,10 +46,10 @@ def form(request):
     else:
         weight = request.POST['weight']
 
-    if "gpu_ids" in request.POST['gpu_ids']:
-        gpu_ids = request.POST['gpu_ids']
-    else:
-        gpu_ids = "0,0"
+    #if "gpu_ids" in request.POST['gpu_ids']:
+    #else:
+    #    gpu_ids = "0,0"
+    gpu_ids = request.POST['gpu_ids']
     #print(request.POST['bicep_critical_value'])
     #if "bicep_critical_value" in request.POST['bicep_critical_value']:
     #    print("hello")
@@ -97,12 +97,17 @@ def form(request):
         destination.write(chunk)
 
     img = I.open(path)
-    exif = img._getexif()
-    if exif is not None:
-        orientation = exif.get(0x112, 1)
-        img = convert_image[orientation](img)
+    try:
+        exif = img._getexif()
+        if exif is not None:
+            orientation = exif.get(0x112, 1)
+            img = convert_image[orientation](img)
+    except:
+        pass
+
     width, height = img.size
     ratio = height / width
+    img.resize((1780, int(1780*ratio))).save(os.path.join(UPLOADE_DIR, name + "_raw.png"))
     img.resize((resize, int(resize*ratio))).save(os.path.join(UPLOADE_DIR, name + ".png"))
 
     insert_data = FileNameModel(file_name = file.name)
@@ -124,17 +129,19 @@ def complete(request):
     a = c.clothingSizeEstimator(
             os.path.join(UPLOADE_DIR, 'frontal.png'),
             os.path.join(UPLOADE_DIR, 'side.png'),
+            os.path.join(UPLOADE_DIR, 'frontal_raw.png'),
+            os.path.join(UPLOADE_DIR, 'side_raw.png'),
             height_cm=height,
             weight_kg=weight,
             feel=feel,
             bicep_critical_value = bicep_critical_value
             )
 
-    a.getExtractBackgroundImages(transform="", gpu_id=gpu_ids[0], divide_size=(1,1),pad=40,thresh=0)
+    a.getExtractBackgroundImages(transform="", gpu_id=gpu_ids[0], divide_size=(1,1),pad=40,thresh=5)
     a.getPoseImages(gpu_id=gpu_ids[1])
     param = a.getImage()
-    I.fromarray(a.frontal_outlined_arr.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'frontal_outline.png'))
-    I.fromarray(a.side_outlined_arr.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'side_outline.png'))
+    I.fromarray(a.frontal_raw_outlined_arr.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'frontal_outline.png'))
+    I.fromarray(a.side_raw_outlined_arr.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'side_outline.png'))
     I.fromarray(a.frontal_labeled_arr.astype(uint8)[...,::-1]).save(os.path.join(UPLOADE_DIR, 'frontal_estimate.png'))
     I.fromarray(a.side_labeled_arr.astype(uint8)[...,::-1]).save(os.path.join(UPLOADE_DIR, 'side_estimate.png'))
     I.fromarray(a.frontal_binary.astype(uint8)).save(os.path.join(UPLOADE_DIR, 'frontal_binary.png'))

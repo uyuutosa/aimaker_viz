@@ -12,12 +12,9 @@ class LucasEstimator:
         popen = sb.Popen("php {} {} {}".format(path, height, weight).split(), stdout=sb.PIPE)
         line = popen.communicate()[0]
         self.line = line
-        print(line)
         lst  = [{x[0].strip(b'"') : float(x[1].strip(b'"'))} for x in [x.split(b':') for x in line[2:].strip(b'{}').split(b',')]]
-        print(lst)
         self.param_dic = {}
         [self.param_dic.update(x) for x in lst]                                                                              
-        print(self.param_dic)
 
     def __getitem__(self, key):
         return self.param_dic[key]
@@ -38,37 +35,16 @@ class AngleBoundaryCondition:
     def __call__(self, p1, p2, p3, p4):
         x2,y2 = p3 - p4
         theta = abs((angle(x2 + y2 * 1.j) - angle(self.vec[0] + self.vec[1] * 1.j))  / pi * 180)
-        print("angle is {}".format(theta))
+        #print("angle is {}".format(theta))
         return theta > self.min_angle and theta <  self.max_angle
         
         
-
-#class evaluator:
-#    def __init__(self):
-#        pass
-#
-#    def setCondition(self, func):
-#        self.func = func
-#            
-#    def setPonits(self,p1, p2, p3, p4):
-#        self.p1 = p1
-#        self.p2 = p2
-#        self.p3 = p3
-#        self.p4 = p4
-#
-#    def eval(self):
-#        return self.func()
-#
-#    def _angleBoundaryCondition(self, min_angle, max_angle):
-#        class minmax:
-
-        
-
-
 class clothingSizeEstimator:
     def __init__(self, 
                  frontal_image_path, 
                  side_image_path, 
+                 frontal_raw_image_path,
+                 side_raw_image_path,
                  height_cm=175,
                  weight_kg=65,
                  lucas_path="./lucas.php",
@@ -78,10 +54,19 @@ class clothingSizeEstimator:
         self.frontal_image_path = frontal_image_path
         self.side_image_path    = side_image_path
         frontal_image = I.open(frontal_image_path)
-        self.frontal_raw_arr = array(frontal_image)
+        self.frontal_resized_arr = array(frontal_image)
 
         side_image = I.open(side_image_path)
-        self.side_raw_arr = array(side_image)
+        self.side_resized_arr = array(side_image)
+
+        frontal_raw_image = I.open(frontal_raw_image_path)
+        self.frontal_raw_arr = array(frontal_raw_image)
+
+        side_raw_image = I.open(side_raw_image_path)
+        self.side_raw_arr = array(side_raw_image)
+
+        self.frontal_resize_ratio = self.frontal_raw_arr.shape[0] / self.frontal_resized_arr.shape[0]
+        self.side_resize_ratio    = self.side_raw_arr.shape[0]    / self.side_resized_arr.shape[0]
 
         self.height_cm = height_cm
         self.weight_kg = weight_kg
@@ -104,11 +89,12 @@ class clothingSizeEstimator:
                                    gpu_id=0, 
                                    divide_size=(1,1), 
                                    dump_path='tmp',
-                                   pad=10,
+                                   pad=40,
                                    thresh=5):
 
-        self.frontal_arr = self._extractBackgroundOfHuman(\
+        self.frontal_resized_extracted_arr, self.frontal_raw_extracted_arr = self._extractBackgroundOfHuman(\
                                    self.frontal_raw_arr, 
+                                   self.frontal_resize_ratio,
                                    transform=transform, 
                                    gpu_id=gpu_id, 
                                    divide_size=divide_size, 
@@ -116,30 +102,45 @@ class clothingSizeEstimator:
                                    image_path=self.frontal_image_path,
                                    )
 
-        self.side_arr = self._extractBackgroundOfHuman(\
+        self.side_resized_extracted_arr, self.side_raw_extracted_arr = self._extractBackgroundOfHuman(\
                                    self.side_raw_arr, 
+                                   self.side_resize_ratio,
                                    transform=transform, 
                                    gpu_id=gpu_id, 
                                    divide_size=divide_size, 
                                    dump_path=dump_path,
                                    image_path=self.side_image_path)
 
-        self.frontal_binary = self._getBinaryImage(self.frontal_arr, thresh=thresh)
-        self.side_binary    = self._getBinaryImage(self.side_arr, thresh=thresh)
 
-        self.frontal_trimed_raw_arr, self.frontal_offset_info = self._getHumanAroundImage(\
+        self.frontal_binary = self._getBinaryImage(self.frontal_resized_extracted_arr, thresh=thresh)
+        self.side_binary    = self._getBinaryImage(self.side_resized_extracted_arr, thresh=thresh)
+
+        self.frontal_raw_trimed_arr, self.frontal_offset_info = self._getHumanAroundImage(\
                                                 self.frontal_binary, 
                                                 self.frontal_raw_arr, 
-                                                pad=pad)
+                                                pad=pad,
+                                                resize_ratio=self.frontal_resize_ratio)
 
-        self.side_trimed_raw_arr, self.side_offset_info = self._getHumanAroundImage(\
+        self.side_raw_trimed_arr, self.side_offset_info = self._getHumanAroundImage(\
                                                 self.side_binary, 
                                                 self.side_raw_arr, 
-                                                pad=pad)
+                                                pad=pad,
+                                                resize_ratio=self.side_resize_ratio)
 
+        #print(self.side_resized_extracted_arr.shape, self.side_raw_extracted_arr.shape)
+        #self.frontal_trimed_resize_ratio = self.frontal_raw_trimed_arr.shape[0] / 512
+        #self.side_trimed_resize_ratio    = self.side_raw_trimed_arr.shape[0]    / 512
+        #print(self.side_binary.shape)
+        #print("hello")
 
-        self.frontal_arr = self._extractBackgroundOfHuman(\
-                                   self.frontal_trimed_raw_arr, 
+        #print(self.frontal_raw_trimed_arr.shape)
+        #print(self.side_raw_trimed_arr.shape)
+        #print("alsdkflj")
+        #input("ahaha")
+        self.frontal_resized_trimed_extracted_arr, self.frontal_raw_trimed_extracted_arr = self._extractBackgroundOfHuman(\
+                                   self.frontal_raw_trimed_arr, 
+                                   self.frontal_resize_ratio, 
+                                   #self.frontal_trimed_resize_ratio, 
                                    transform=transform, 
                                    gpu_id=gpu_id, 
                                    divide_size=divide_size, 
@@ -147,35 +148,48 @@ class clothingSizeEstimator:
                                    image_path=self.frontal_image_path,
                                    )
 
-        self.side_arr = self._extractBackgroundOfHuman(\
-                                   self.side_trimed_raw_arr, 
+        self.side_resized_trimed_extracted_arr, self.side_raw_trimed_extracted_arr = self._extractBackgroundOfHuman(\
+                                   self.side_raw_trimed_arr, 
+                                   self.side_resize_ratio, 
+                                   #self.side_trimed_resize_ratio, 
                                    transform=transform, 
                                    gpu_id=gpu_id, 
                                    divide_size=divide_size, 
                                    dump_path=dump_path,
                                    image_path=self.side_image_path)
 
-        self.frontal_binary = self._getBinaryImage(self.frontal_arr, thresh=thresh)
-        self.side_binary    = self._getBinaryImage(self.side_arr, thresh=thresh)
+        self.frontal_binary = self._getBinaryImage(self.frontal_raw_trimed_extracted_arr, thresh=thresh)
+        self.side_binary    = self._getBinaryImage(self.side_raw_trimed_extracted_arr, thresh=thresh)
 
-        self.frontal_outlined_arr, self.frontal_contour = self._drawOutline(self.frontal_binary,
+        self.frontal_raw_outlined_arr, self.frontal_contour = self._drawOutline(\
+                                                      self.frontal_binary,
                                                       self.frontal_raw_arr,
-                                                      self.frontal_offset_info)
+                                                      self.frontal_offset_info,
+                                                      self.frontal_resize_ratio)
 
-        self.side_outlined_arr, self.side_contour = self._drawOutline(self.side_binary,
+        self.side_raw_outlined_arr, self.side_contour = self._drawOutline(\
+                                                      self.side_binary,
                                                       self.side_raw_arr,
-                                                      self.side_offset_info)
+                                                      self.side_offset_info,
+                                                      self.side_resize_ratio)
+
 
     def getPoseImages(self, dump_path=None, gpu_id=0, weight_name='./model/pose_model.pth'):
         frontal_axis_info, self.frontal_pose_labeled_image = self._estimatePose(\
-                                                          self.frontal_arr, 
+                                                          self.frontal_resized_trimed_extracted_arr, 
+                                                          self.frontal_raw_trimed_extracted_arr, 
+                                                          self.frontal_resize_ratio, 
+                                                          #self.frontal_trimed_resize_ratio, 
                                                           dump_path=dump_path, 
                                                           gpu_id=gpu_id,
                                                           weight_name=weight_name
                                                           )
 
         side_axis_info, self.side_pose_labeled_image = self._estimatePose(\
-                                                          self.side_arr, 
+                                                          self.side_resized_trimed_extracted_arr, 
+                                                          self.side_raw_trimed_extracted_arr, 
+                                                          self.side_resize_ratio, 
+                                                          #self.side_trimed_resize_ratio, 
                                                           dump_path=dump_path, 
                                                           gpu_id=gpu_id,
                                                           weight_name=weight_name)
@@ -208,8 +222,8 @@ class clothingSizeEstimator:
         return result_dic
 
     def _initializeLabeledImage(self):
-        self.frontal_labeled_arr = self.frontal_arr.copy()
-        self.side_labeled_arr    = self.side_arr.copy()
+        self.frontal_labeled_arr = self.frontal_raw_trimed_arr.copy()[...,::-1].astype(np.uint8)
+        self.side_labeled_arr    = self.side_raw_trimed_arr.copy()[...,::-1].astype(np.uint8)
 
 
     def _parsePoints(self, 
@@ -230,7 +244,22 @@ class clothingSizeEstimator:
 
         ## for froontal images
         # point for calculate normal vector
-        frontal_p_dic = {}
+        class ratioCrrectiveDic:
+            def __init__(self, p_dic, ratio):
+                self.p_dic = p_dic
+                self.ratio = ratio
+
+            def update(self, dic):
+                self.p_dic.update(dic)
+
+
+            def __setitem__(self, k, v):
+                self.p_dic[k] = v
+
+            def __getitem__(self, k):
+                return (self.p_dic[k][0] * self.ratio).astype(int), (self.p_dic[k][1] * self.ratio).astype(int)
+            
+        frontal_p_dic = ratioCrrectiveDic({}, self.frontal_resize_ratio)
         frontal_p_dic['left_bicep']      = self._calcIntermedPoints(frontal_points, 5, 6)
         frontal_p_dic['right_bicep']     = self._calcIntermedPoints(frontal_points, 2, 3)
         frontal_p_dic['left_fore_arm']   = self._calcIntermedPoints(frontal_points, 6, 7)
@@ -254,6 +283,7 @@ class clothingSizeEstimator:
         ## for side images
         # point for calculate tangent vector
         side_p_dic = {}
+        side_p_dic = ratioCrrectiveDic({}, self.side_resize_ratio)
         side_p_dic['shoulder'] = self._calcShoulderPoints(frontal_points)#array(side_points.ix[array([2, 5])]) #to reviseion
         side_p_dic['hem']      = self._calcHemPoints(side_points)
         side_p_dic['chest']    = self._calcChestPoints(side_points)
@@ -276,7 +306,7 @@ class clothingSizeEstimator:
     #    return concatenate((intermed[None,:], array(points.ix[j])[None,:]), axis=0)
 
 
-    def _drawOutline(self, binary, raw, offset_info):
+    def _drawOutline(self, binary, raw, offset_info, resize_ratio):
         raw = raw.copy()
         imgEdge, contours, hierarchy = cv2.findContours(binary, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
         lst = [len(x) for x in contours]
@@ -289,7 +319,7 @@ class clothingSizeEstimator:
 
         ##savetxt("value.txt", cnt[:, 0, :].T)
 
-        return cv2.drawContours(raw.copy(),[cnt_for_draw.astype(int32)] , -1, (0,255,0), 1).astype(uint8), cnt
+        return cv2.drawContours(raw.copy(),[(cnt_for_draw).astype(int32)] , -1, (0,255,0), 6).astype(uint8), cnt
         #wreturn raw, cnt
 
     def _calcNeckPoints(self, points):
@@ -338,12 +368,12 @@ class clothingSizeEstimator:
         center_hip_point = array((points.ix[8] + points.ix[11]) / 2)
         return concatenate((center_hip_point[None, :], array(points.ix[1])[None,:]), axis=0)
 
-    def _getBinaryImage(self, arr, thresh=5):
+    def _getBinaryImage(self, arr, thresh=0):
         kernel = ones((5,5),np.uint8)
         return cv2.morphologyEx(where(arr.max(axis=2)>thresh, 255, 0).astype(uint8), cv2.MORPH_OPEN, kernel)
        # return #.max(axis=2)
 
-    def _getHumanAroundImage(self, binary, raw, pad):
+    def _getHumanAroundImage(self, binary, raw, pad, resize_ratio):
         size = binary.max(axis=1).size
         for n,i in enumerate(binary.max(axis=1)):
             if i:
@@ -369,7 +399,17 @@ class clothingSizeEstimator:
         j = -1-bottom+pad if -1-bottom+pad < 0 else -1
         k = left-pad if left-pad >= 0 else 0
         l = -1-right+pad if -1-right+pad < 0 else -1
-        print(i,j,k,l)
+
+        i = int(i * resize_ratio)
+        j = int(j * resize_ratio) 
+        if j == 0:
+            j = -1
+        k = int(k * resize_ratio)
+        l = int(l * resize_ratio)
+        if l == 0:
+            l = -1
+
+
 
         return raw[i:j, k:l],\
                {'y':i, 'x':k}
@@ -387,6 +427,8 @@ class clothingSizeEstimator:
         bottom = n
         
         ratio = height_cm / ((size - bottom) - top)
+        #cv2.circle(binary, (100, int(top)), 7, 255, -1)
+        #cv2.circle(binary, (100, int(size - bottom)), 7, 255, -1)
         return ratio
 
     def _calcTangentDistance(self, 
@@ -468,12 +510,12 @@ class clothingSizeEstimator:
         length = distance * ratio * (1 - correction_factor)
 
 
-        loc = tuple((array([x, y]) - t * distance * correction_factor/2).astype(int))
-        loc2  = tuple((array([x2, y2]) + t * distance * correction_factor/2).astype(int))
+        loc = tuple(((array([x, y]) - t * distance * correction_factor/2)).astype(int))
+        loc2  = tuple(((array([x2, y2]) + t * distance * correction_factor/2)).astype(int))
 
-        cv2.circle(labeled_arr, loc, 4, 255, -1)
-        cv2.circle(labeled_arr, loc2, 4, 255, -1)
-        cv2.line(labeled_arr, loc2, loc, (0, 255, 0), 2)
+        cv2.circle(labeled_arr, loc, 10, 255, -1)
+        cv2.circle(labeled_arr, loc2, 10, 255, -1)
+        cv2.line(labeled_arr, loc2, loc, (0, 255, 0), 10)
 
 
         font = cv2.FONT_HERSHEY_PLAIN
@@ -523,7 +565,6 @@ class clothingSizeEstimator:
                         break
 
 
-                        
                 
                 for i in range(max_length):
                     x2,y2 = (ini + i*(-n)).astype(int)
@@ -575,15 +616,15 @@ class clothingSizeEstimator:
         distance = linalg.norm(array([x2,y2]) - array([x,y])) 
         length = distance * ratio * (1 - correction_factor)
                 
-        loc  = tuple((array([x, y]) - n * distance * correction_factor/2).astype(int))
-        loc2 = tuple((array([x2, y2]) + n * distance * correction_factor/2).astype(int))
+        loc  = tuple(((array([x, y]) - n * distance * correction_factor/2) ).astype(int))
+        loc2 = tuple(((array([x2, y2]) + n * distance * correction_factor/2) ).astype(int))
 
-        cv2.circle(labeled_arr, loc, 4, 255, -1)
-        cv2.circle(labeled_arr, loc2, 4, 255, -1)
+        cv2.circle(labeled_arr, loc, 10, 255, -1)
+        cv2.circle(labeled_arr, loc2, 10, 255, -1)
         cv2.line(labeled_arr, 
                  loc, 
                  loc2, 
-                 (0, 255, 0), 2)
+                 (0, 255, 0), 10)
                 
         points = (array([x,y]), array([x2,y2]))
         return length, points
@@ -606,8 +647,8 @@ class clothingSizeEstimator:
         dist1 += 2.2 / self.frontal_ratio
         dist2 += 2.2 / self.frontal_ratio
 
-        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p1), tuple((shoulder_p1 + t1 * dist1).astype(int)), (0, 0, 255), 2)
-        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p2), tuple((shoulder_p2 + t2 * dist2).astype(int)), (0, 0, 255), 2)
+        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p1), tuple((shoulder_p1 + t1 * dist1).astype(int)), (0, 0, 255), 10)
+        cv2.line(self.frontal_labeled_arr, tuple(shoulder_p2), tuple((shoulder_p2 + t2 * dist2).astype(int)), (0, 0, 255), 10)
 
         result_dic['left_sleeve_length']   = left  = linalg.norm(shoulder_p1 - left_wrist_p2) * self.frontal_ratio
         result_dic['right_sleeve_length']  = right = linalg.norm(shoulder_p2 - right_wrist_p1) * self.frontal_ratio
@@ -637,7 +678,7 @@ class clothingSizeEstimator:
         c = crit < y
         contour = contour[c.argmax():c.size - c[::-1].argmax()]
         #for i, p in enumerate(contour):
-        #    cv2.circle(self.frontal_outlined_arr, tuple(p[0]), 4, (0, i, i), -1)
+        #    cv2.circle(self.frontal_resized_outlined_arr, tuple(p[0]), 4, (0, i, i), -1)
 
         y = contour[:, 0, 1]
         return contour[y.argmin()][0]
@@ -655,7 +696,7 @@ class clothingSizeEstimator:
         dist = linalg.norm(p5 - p1) + 10 / self.frontal_ratio
         print(p5)
         print(tuple(p1.astype(int)), tuple((p1 + t * dist).astype(int)))
-        cv2.line(self.frontal_labeled_arr, tuple(p1.astype(int)), tuple((p1 + t * dist).astype(int)), (0, 0, 255), 2)
+        cv2.line(self.frontal_labeled_arr, tuple(p1.astype(int)), tuple((p1 + t * dist).astype(int)), (0, 0, 255), 10)
 
         result_dic['body_length'] = dist * self.frontal_ratio
         result_dic['lucas_body_length'] = self.lucas[b'shirt_sleeve']
@@ -674,16 +715,16 @@ class clothingSizeEstimator:
         hem_p1[1] -= hem_p1[1] * 0.05
         hem_p2[1] -= hem_p2[1] * 0.05
 
-        cv2.line(self.frontal_labeled_arr, tuple(hem_p1), tuple(left_ankle_p2), (0, 0, 255), 2)
-        cv2.line(self.frontal_labeled_arr, tuple(hem_p2), tuple(right_ankle_p1), (0, 0, 255), 2)
+        cv2.line(self.frontal_labeled_arr, tuple(hem_p1), tuple(left_ankle_p2), (0, 0, 255), 10)
+        cv2.line(self.frontal_labeled_arr, tuple(hem_p2), tuple(right_ankle_p1), (0, 0, 255), 10)
 
 
         #crotch_point = self._getIntersection(left_calf_p2, left_ankle_p1, right_calf_p1, right_ankle_p2)
         crotch_point = self._calcCrotchPoint(self.frontal_contour)
         print(crotch_point)
 
-        cv2.line(self.frontal_labeled_arr, tuple(crotch_point), tuple(left_ankle_p1), (0, 0, 255), 2)
-        cv2.line(self.frontal_labeled_arr, tuple(crotch_point), tuple(right_ankle_p2), (0, 0, 255), 2)
+        cv2.line(self.frontal_labeled_arr, tuple(crotch_point), tuple(left_ankle_p1), (0, 0, 255), 10)
+        cv2.line(self.frontal_labeled_arr, tuple(crotch_point), tuple(right_ankle_p2), (0, 0, 255), 10)
 
         result_dic['left_trouser_length']  = left = linalg.norm(hem_p1 - left_ankle_p2) * self.frontal_ratio
         result_dic['right_trouser_length'] = right = linalg.norm(hem_p2 - right_ankle_p1) * self.frontal_ratio
@@ -700,24 +741,24 @@ class clothingSizeEstimator:
         result_dic['neck_frontal_width'], point_dic['neck_frontal_width']\
                 = neck_frontal_width, _\
                 = self._calcNormalDistance(self.frontal_p_dic['neck_width'], 
-                                            self.frontal_arr, 
+                                            self.frontal_raw_trimed_extracted_arr, 
                                             self.frontal_binary, 
                                             self.frontal_ratio, 
                                             self.frontal_labeled_arr,
                                             name='neck_frontal_width',
                                             correction_factor=self._getCorrectValue(),
-                                            n_offset=(30, 1)
+                                            n_offset=(80, 1)
                                             )
         result_dic['neck_side_width'], point_dic['neck_side_width']\
                 = neck_side_width, _\
                 = self._calcNormalDistance(self.side_p_dic['neck_width'],
-                                           self.side_arr,
+                                           self.side_raw_trimed_extracted_arr,
                                            self.side_binary, 
                                            self.side_ratio, 
                                            self.side_labeled_arr,
                                            name='neck_side_width',
                                            correction_factor=self._getCorrectValue(),
-                                           n_offset=(30, 1)
+                                           n_offset=(80, 1)
                                            )
 
         result_dic['neck_circumference']\
@@ -733,7 +774,7 @@ class clothingSizeEstimator:
     def estimateShoulderWidth(self, result_dic, point_dic):
         result_dic['shoulder_width'], point_dic['shoulder_width'] = self._calcNormalDistance(
                 self.frontal_p_dic['shoulder'], 
-                self.frontal_arr, 
+                self.frontal_raw_trimed_extracted_arr, 
                 self.frontal_binary, 
                 self.frontal_ratio, 
                 self.frontal_labeled_arr,
@@ -750,7 +791,7 @@ class clothingSizeEstimator:
         result_dic['waist_frontal_width'], point_dic['waist_frontal_width']\
                 = waist_frontal_width, _\
                 = self._calcNormalDistance(self.frontal_p_dic['waist'], 
-                                            self.frontal_arr, 
+                                            self.frontal_raw_trimed_extracted_arr, 
                                             self.frontal_binary, 
                                             self.frontal_ratio, 
                                             self.frontal_labeled_arr,
@@ -760,7 +801,7 @@ class clothingSizeEstimator:
         result_dic['waist_side_width'], point_dic['waist_side_width']\
                 = waist_side_width, _\
                 = self._calcNormalDistance(self.side_p_dic['waist'],
-                                           self.side_arr,
+                                           self.side_raw_trimed_extracted_arr,
                                            self.side_binary, 
                                            self.side_ratio, 
                                            self.side_labeled_arr,
@@ -788,7 +829,7 @@ class clothingSizeEstimator:
         result_dic['chest_frontal_width'], point_dic['chest_frontal_width']\
                 = chest_frontal_width, _\
                 = self._calcNormalDistance(self.frontal_p_dic['chest'], 
-                                            self.frontal_arr, 
+                                            self.frontal_raw_trimed_extracted_arr, 
                                             self.frontal_binary, 
                                             self.frontal_ratio, 
                                             self.frontal_labeled_arr,
@@ -799,7 +840,7 @@ class clothingSizeEstimator:
         result_dic['chest_side_width'], point_dic['chest_side_width']\
                 = chest_side_width, _\
                 = self._calcNormalDistance(self.side_p_dic['chest'],
-                                           self.side_arr,
+                                           self.side_raw_trimed_extracted_arr,
                                            self.side_binary, 
                                            self.side_ratio, 
                                            self.side_labeled_arr,
@@ -822,14 +863,14 @@ class clothingSizeEstimator:
     #    result_dic['girth_frontal_width']\
     #        = girth_frontal_width\
     #        = self._calcTangentDistance(self.frontal_p_dic['girth'], 
-    #                                    self.frontal_arr, 
+    #                                    self.frontal_raw_trimed_extracted_arr, 
     #                                    self.frontal_binary, 
     #                                    self.frontal_ratio)
 
     #    result_dic['girth_side_width']\
     #        = girth_side_width\
     #        = self._calcNormalDistance(self.side_p_dic['girth'],  
-    #                                   self.side_arr, 
+    #                                   self.side_raw_trimed_extracted_arr, 
     #                                   self.side_binary, 
     #                                   self.side_ratio)
 
@@ -844,18 +885,20 @@ class clothingSizeEstimator:
         result_dic['left_fore_arm_width'], point_dic['left_fore_arm_width']\
             = left_fore_arm_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_fore_arm'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='left_fore_arm_width')
 
         result_dic['right_fore_arm_width'], point_dic['right_fore_arm_width']\
             = right_fore_arm_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_fore_arm'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='right_fore_arm_width')
 
@@ -870,11 +913,12 @@ class clothingSizeEstimator:
         return result_dic, point_dic
 
     def _calcLength(self, df, left_indices, right_indices):
+        print(self.frontal_ratio)
         p1, p2 = df.ix[left_indices[0]], df.ix[left_indices[1]]
         left = linalg.norm(p1 - p2)
         p1, p2 = df.ix[right_indices[0]], df.ix[right_indices[1]]
         right = linalg.norm(p1 - p2)
-        return (left + right) / 2 * self.frontal_ratio
+        return (left + right) / 2 * self.frontal_ratio * self.frontal_resize_ratio
 
     def estimateBicep(self, result_dic, point_dic):
         #上腕
@@ -887,9 +931,10 @@ class clothingSizeEstimator:
         result_dic['left_bicep_width'], point_dic['left_bicep_width']\
             = left_bicep_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_bicep'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='left_bicep_width',
                                         limit_boundaries=[(p3, p4, 2, AngleBoundaryCondition(*self.bicep_critical_value, (0, 1)))])
@@ -905,9 +950,10 @@ class clothingSizeEstimator:
         result_dic['right_bicep_width'], point_dic['right_bicep_width']\
             = right_bicep_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_bicep'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='right_bicep_width',
                                         limit_boundaries=[(p3, p4, 1, AngleBoundaryCondition(*self.bicep_critical_value, (0, 1)))]
@@ -930,18 +976,20 @@ class clothingSizeEstimator:
         result_dic['left_thigh_width'], point_dic['left_thigh_width'], \
             = left_thigh_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_thigh'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='left_thigh_width')
 
         result_dic['right_thigh_width'], point_dic['right_thigh_width']\
             = right_thigh_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_thigh'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='right_thigh_width')
 
@@ -963,18 +1011,20 @@ class clothingSizeEstimator:
         result_dic['left_calf_width'], point_dic['left_calf_width']\
             = left_calf_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_calf'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='left_calf_width')
 
         result_dic['right_calf_width'], point_dic['right_calf_width']\
             = right_calf_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_calf'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='right_calf_width')
 
@@ -995,18 +1045,20 @@ class clothingSizeEstimator:
         result_dic['ankle_left_frontal_width'], point_dic['ankle_left_frontal_width']\
             = ankle_left_frontal_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_ankle'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='ankle_left_frontal_width')
 
         result_dic['ankle_right_frontal_width'], point_dic['ankle_right_frontal_width']\
             = ankle_right_frontal_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_ankle'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='ankle_right_frontal_width')
 
@@ -1021,18 +1073,20 @@ class clothingSizeEstimator:
         result_dic['wrist_left_frontal_width'], point_dic['wrist_left_frontal_width']\
             = wrist_left_frontal_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['left_wrist'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='wrist_left_frontal_width')
 
         result_dic['wrist_right_frontal_width'], point_dic['wrist_right_frontal_width']\
             = wrist_right_frontal_width, _\
             = self._calcNormalDistance(self.frontal_p_dic['right_wrist'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='wrist_right_frontal_width')
 
@@ -1047,18 +1101,20 @@ class clothingSizeEstimator:
         result_dic['hem_frontal_width'], point_dic['hem_frontal_width']\
             = hem_frontal_width, _\
             = self._calcTangentDistance(self.frontal_p_dic['hem'], 
-                                        self.frontal_arr, 
+                                        self.frontal_raw_trimed_extracted_arr, 
                                         self.frontal_binary, 
-                                        self.frontal_ratio, self.frontal_labeled_arr,
+                                        self.frontal_ratio, 
+                                        self.frontal_labeled_arr,
                                         correction_factor=self._getCorrectValue(),
                                         name='hem_frontal_width')
 
         result_dic['hem_side_width'], point_dic['hem_side_width']\
             = hem_side_width, _\
             = self._calcNormalDistance(self.side_p_dic['hem'],  
-                                       self.side_arr, 
+                                       self.side_raw_trimed_extracted_arr, 
                                        self.side_binary, 
-                                       self.side_ratio, self.side_labeled_arr,
+                                       self.side_ratio, 
+                                       self.side_labeled_arr,
                                        correction_factor=0.1,
                                        name='hem_side_width')
 
@@ -1076,7 +1132,8 @@ class clothingSizeEstimator:
     def _calcCircleLength(self, a):
         return 2 * pi * a
 
-    def _extractBackgroundOfHuman(self, image, transform='', gpu_id=0, divide_size=(1,1), dump_path='tmp', image_path=None):
+    def _extractBackgroundOfHuman(self, raw_image, resize_ratio, transform='', gpu_id=0, divide_size=(1,1), dump_path='tmp', image_path=None):
+        h,w,c = raw_image.shape
         # coding: utf-8
         import aimaker.predictor.segmentation_predictor as sp
         #a = sp.SegmentationPredictor("/home/yu/Dropbox/manechin", "resize256x305_toNumpy", gpu_ids='0',divide_size=(2,1))
@@ -1088,10 +1145,14 @@ class clothingSizeEstimator:
         a = sp.SegmentationPredictor(image_path, transform, gpu_ids=str(gpu_id),divide_size=divide_size)
         #print(image.astype(uint8))
         #print(image.astype(uint8).shape)
-        return a._dividedPredict(I.fromarray(image.astype(uint8)))
+       # print("kokodesu {}".format(raw_image.shape))
+        result_raw_image = a._dividedPredict(I.fromarray(raw_image.astype(uint8)), resize_ratio=(1/resize_ratio, 1/resize_ratio))
+        result_resized_image = cv2.resize(result_raw_image, (int(w / resize_ratio), int(h / resize_ratio)), interpolation=cv2.INTER_CUBIC)
+        return result_resized_image, result_raw_image
 
 
-    def _estimatePose(self, raw_image, dump_path=None, gpu_id=0, weight_name = './model/pose_model.pth'):
+
+    def _estimatePose(self, raw_image, draw_image, resize_ratio, dump_path=None, gpu_id=0, weight_name = './model/pose_model.pth'):
         import os
         import re
         import sys
@@ -1428,21 +1489,29 @@ class clothingSizeEstimator:
                 deleteIdx.append(i)
         subset = np.delete(subset, deleteIdx, axis=0)
         
-        canvas = raw_image.copy()
+        canvas = draw_image.copy()
         #o = open("frontal_kenji_axis.txt", "w")
         o = open("side_man_axis.txt", "w")
         lst = []
         for i in range(18):
             for j in range(len(all_peaks[i])):
                 font = cv2.FONT_HERSHEY_SIMPLEX
-                cv2.putText(canvas, str(i),all_peaks[i][j][0:2], font, 1, colors[i])
-                cv2.circle(canvas, all_peaks[i][j][0:2], 10, colors[i], thickness=-1)
+                tmp = all_peaks[i][j][0:2]
+                loc = (int(tmp[0] * resize_ratio), int(tmp[1] * resize_ratio))
+                #print(loc)
+                cv2.putText(canvas, "{}".format(i), loc, font, 4, colors[i], 3)
+                loc = all_peaks[i][j][0:2]
+                tmp = []
+                tmp += [int(loc[0] * resize_ratio)]
+                tmp += [int(loc[1] * resize_ratio)]
+                loc = tmp
+                cv2.circle(canvas, tuple(loc), 10, colors[i], thickness=-1)
                 o.write("{},{},{}\n".format(i,*all_peaks[i][j][0:2]))
                 lst += [[i,*all_peaks[i][j][0:2]]]
                 
         param_arr = array(lst) 
         
-        stickwidth = 4
+        stickwidth = 20
         
         for i in range(17):
             for n in range(len(subset)):
@@ -1452,9 +1521,9 @@ class clothingSizeEstimator:
                 cur_canvas = canvas.copy()
                 Y = candidate[index.astype(int), 0]
                 X = candidate[index.astype(int), 1]
-                mX = np.mean(X)
-                mY = np.mean(Y)
-                length = ((X[0] - X[1]) ** 2 + (Y[0] - Y[1]) ** 2) ** 0.5
+                mX = np.mean(X) * resize_ratio
+                mY = np.mean(Y) * resize_ratio
+                length = resize_ratio * ((X[0] - X[1]) ** 2 + (Y[0] - Y[1]) ** 2) ** 0.5
                 angle = math.degrees(math.atan2(X[0] - X[1], Y[0] - Y[1]))
                 polygon = cv2.ellipse2Poly((int(mY),int(mX)), (int(length/2), stickwidth), int(angle), 0, 360, 1)
                 cv2.fillConvexPoly(cur_canvas, polygon, colors[i])
